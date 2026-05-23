@@ -17,6 +17,9 @@ jobs:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
+          port: 22
+          timeout: 60s
+          command_timeout: 15m
 
           script: |
             cd /var/www/IEA-STAYS-WEB
