@@ -4,7 +4,7 @@
 
 The homepage is built to match the shared reference image. Right now, the PG room photos are cropped from:
 
-`assets/homepage-reference.png`
+`public/assets/homepage-reference.png`
 
 This keeps the first version visually identical to the approved mockup.
 
@@ -12,7 +12,7 @@ This keeps the first version visually identical to the approved mockup.
 
 1. Add your final room images inside:
 
-   `assets/homes/`
+   `public/assets/homes/`
 
 2. Use these filenames:
 

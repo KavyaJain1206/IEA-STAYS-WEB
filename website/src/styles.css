@@ -11,7 +11,7 @@
   --shadow: 0 18px 38px rgba(45, 35, 20, 0.15);
   --serif: "Cormorant Garamond", "Playfair Display", Georgia, serif;
   --sans: "Inter", Arial, sans-serif;
-  --ref: url("assets/homepage-reference.png");
+  --ref: url("/assets/homepage-reference.png");
   --page-scale: 1;
 }
 
@@ -26,12 +26,17 @@ html {
 body {
   margin: 0;
   min-width: 0;
-  min-height: calc(1024px * var(--page-scale));
+  min-height: 100vh;
   color: var(--ink);
   background:
     radial-gradient(circle at 10% 20%, rgba(235, 212, 168, 0.28), transparent 28rem),
     linear-gradient(180deg, #fffaf0 0%, #fbf5eb 100%);
   font-family: var(--sans);
+}
+
+body.home-route {
+  min-height: var(--page-height, 100vh);
+  overflow-x: hidden;
 }
 
 a {
@@ -55,11 +60,17 @@ button {
   transform-origin: top left;
 }
 
+body.home-route .site-frame {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
 .topbar {
   position: relative;
   height: 99px;
   display: grid;
-  grid-template-columns: 330px 1fr 300px;
+  grid-template-columns: 330px 1fr 360px;
   align-items: center;
   padding: 0 80px;
   border-top: 1px solid #c49b4e;
@@ -106,6 +117,15 @@ button {
   align-items: center;
   gap: 35px;
   font: 600 17px var(--serif);
+}
+
+.auth-link-button {
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
 }
 
 .signup {
@@ -480,6 +500,7 @@ button {
 }
 
 .collection-text {
+  min-width: 0;
   padding-top: 2px;
 }
 
@@ -495,20 +516,26 @@ button {
 .collection-text h2 {
   margin: 0;
   font: 700 36px/1 var(--serif);
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .tone {
   margin: 7px 0 15px;
   color: #a06d22;
   font: italic 17px/1 var(--serif);
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .collection-text p:last-child {
-  width: 443px;
+  width: auto;
+  max-width: 100%;
   margin: 0;
   color: #4e5753;
   font-size: 13px;
   line-height: 1.72;
+  overflow-wrap: anywhere;
 }
 
 .collection-benefits {
@@ -575,19 +602,19 @@ button {
 }
 
 .studio-photo {
-  background-image: url("assets/homes/aries-studio.jpg");
+  background-image: url("/assets/homes/aries-studio.jpg");
   background-size: cover;
   background-position: center;
 }
 
 .nest-photo {
-  background-image: url("assets/homes/aries-nest.jpg");
+  background-image: url("/assets/homes/aries-nest.jpg");
   background-size: cover;
   background-position: center;
 }
 
 .bnb-photo {
-  background-image: url("assets/homes/aries-bnb.jpg");
+  background-image: url("/assets/homes/aries-bnb.jpg");
   background-size: cover;
   background-position: center;
 }
