@@ -150,7 +150,7 @@ export default function HomePage() {
                 Premium PG stays, shaped around comfort and belonging.<span>&#10022;</span>
               </h1>
               <p>
-                IEA Stays brings you a chain of refined PG homes, each inspired by a zodiac sign
+                IEA Stays Live brings you a chain of refined PG homes, each inspired by a zodiac sign
                 and crafted for modern living, community, and peace of mind.
               </p>
 
