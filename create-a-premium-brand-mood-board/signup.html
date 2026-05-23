@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sign Up | IEA Stays</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="forms.css" />
+  </head>
+  <body>
+    <main class="form-page">
+      <section class="form-brand">
+        <a class="wordmark" href="index.html"><span>✦</span> IEA Stays</a>
+        <div>
+          <h1>Resident application before sign up.</h1>
+          <p>Complete these details so the IEA Stays team can verify your profile and prepare your stay record.</p>
+        </div>
+      </section>
+      <section class="form-shell">
+        <form class="lead-form">
+          <p class="kicker">Resident Application</p>
+          <h2>Sign up details</h2>
+          <div class="fields">
+            <h3 class="form-section-title">Personal details</h3>
+            <label>Full name<input required name="full_name" autocomplete="name" /></label>
+            <label>Mobile number<input required type="tel" name="mobile" autocomplete="tel" /></label>
+            <label>Alternate number<input type="tel" name="alternate_mobile" /></label>
+            <label>Email<input required type="email" name="email" autocomplete="email" /></label>
+            <label>Aadhaar number<input required name="aadhaar_number" inputmode="numeric" maxlength="12" /></label>
+            <label>PAN number<input required name="pan_number" maxlength="10" /></label>
+
+            <h3 class="form-section-title">Address details</h3>
+            <label class="full">Permanent address<textarea required name="permanent_address"></textarea></label>
+            <label class="full">Residence address<textarea required name="residence_address"></textarea></label>
+
+            <h3 class="form-section-title">Work details</h3>
+            <label>Occupation<input required name="occupation" /></label>
+            <label>Office / firm name<input name="firm_name" /></label>
+            <label class="full">Address of firm<textarea name="firm_address"></textarea></label>
+
+            <h3 class="form-section-title">Emergency contact</h3>
+            <label>Next of kin<input required name="next_of_kin" /></label>
+            <label>Relationship<input required name="relationship" /></label>
+            <label>Mobile number<input required type="tel" name="kin_mobile" /></label>
+            <label>Alternate number<input type="tel" name="kin_alternate_mobile" /></label>
+
+            <h3 class="form-section-title">Food preference</h3>
+            <fieldset class="choice-group">
+              <legend>Food from IEA Stays</legend>
+              <label><input type="radio" name="food_from_iea" value="yes" required /> Yes</label>
+              <label><input type="radio" name="food_from_iea" value="no" /> No</label>
+            </fieldset>
+            <label>Food delivery service provider name<input name="food_delivery_provider" /></label>
+
+            <h3 class="form-section-title">Account security</h3>
+            <label class="full">Password<input required type="password" name="password" autocomplete="new-password" /></label>
+          </div>
+          <div class="form-actions">
+            <button class="submit-btn" type="submit">Submit application</button>
+            <a class="back-link" href="index.html">Back home</a>
+          </div>
+        </form>
+      </section>
+    </main>
+  </body>
+</html>
