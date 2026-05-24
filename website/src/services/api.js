@@ -144,6 +144,37 @@ export function getCatalogHomes() {
   return request("/catalog/homes");
 }
 
+export function getHomepageContent() {
+  return request("/homepage");
+}
+
+export function listHomepageSections() {
+  return request("/homepage/sections/");
+}
+
+export function createHomepageSection(token, payload) {
+  return request("/homepage/sections/", {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateHomepageSection(token, id, payload) {
+  return request(`/homepage/sections/${id}`, {
+    method: "PATCH",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteHomepageSection(token, id) {
+  return request(`/homepage/sections/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+}
+
 export function getAdminCatalogSummary(token) {
   return request("/admin/catalog/summary", {
     headers: authHeaders(token),

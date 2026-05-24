@@ -5,7 +5,7 @@ import Navbar from "../components/Navbar.jsx";
 import PropertyCard from "../components/PropertyCard.jsx";
 import Toast from "../components/Toast.jsx";
 import ZodiacSelector from "../components/ZodiacSelector.jsx";
-import { getCatalogCollections, getCatalogHomes } from "../services/api.js";
+import { getCatalogCollections, getCatalogHomes, getHomepageContent } from "../services/api.js";
 import { properties, zodiacCollections } from "../data/zodiacCollections.js";
 
 export default function HomePage() {
@@ -15,6 +15,7 @@ export default function HomePage() {
   const [comingSoonCollection, setComingSoonCollection] = useState(
     zodiacCollections.find((collection) => !collection.available) || zodiacCollections[1]
   );
+  const [homepage, setHomepage] = useState(null);
   const [toastMessage, setToastMessage] = useState("");
   const [toastVisible, setToastVisible] = useState(false);
   const frameRef = useRef(null);
@@ -75,8 +76,8 @@ export default function HomePage() {
           );
           setComingSoonCollection(
             normalizedCollections.find((collection) => !collection.available) ||
-              normalizedCollections[1] ||
-              normalizedCollections[0]
+            normalizedCollections[1] ||
+            normalizedCollections[0]
           );
         }
 
@@ -102,6 +103,25 @@ export default function HomePage() {
     };
 
     loadCatalog();
+    // load homepage content (non-blocking)
+    (async () => {
+      try {
+        const data = await getHomepageContent();
+        setHomepage(data);
+        // apply coming soon mapping
+        if (data?.coming?.name) {
+          setComingSoonCollection((current) => ({
+            name: data.coming.name,
+            symbol: data.coming.symbol,
+            tone: data.coming.tone,
+            available: false,
+            description: data.coming.description,
+          }));
+        }
+      } catch {
+        // keep defaults
+      }
+    })();
   }, []);
 
   const showToast = (message) => {
@@ -146,13 +166,8 @@ export default function HomePage() {
 
           <section className="hero-row" aria-labelledby="hero-title">
             <div className="hero-copy">
-              <h1 id="hero-title">
-                Premium PG stays, shaped around comfort and belonging.<span>&#10022;</span>
-              </h1>
-              <p>
-                IEA Stays Live brings you a chain of refined PG homes, each inspired by a zodiac sign
-                and crafted for modern living, community, and peace of mind.
-              </p>
+              <h1 id="hero-title">{homepage?.hero_title || "Premium PG stays, shaped around comfort and belonging."}<span>&#10022;</span></h1>
+              <p>{homepage?.hero_subtitle || "IEA Stays Live brings you a chain of refined PG homes, each inspired by a zodiac sign and crafted for modern living, community, and peace of mind."}</p>
 
               <div className="cta-row">
                 <a className="btn primary" href="#homes">
@@ -164,33 +179,52 @@ export default function HomePage() {
               </div>
 
               <div className="stats-row" aria-label="IEA Stays statistics">
-                <div className="stat">
-                  <span className="star">&#10038;</span>
-                  <strong>12</strong>
-                  <small>
-                    Zodiac Collections
-                    <br />
-                    Unique PG Chains
-                  </small>
-                </div>
-                <div className="stat">
-                  <span className="home-icon">&#8962;</span>
-                  <strong>30+</strong>
-                  <small>
-                    Curated Locations
-                    <br />
-                    Across Cities
-                  </small>
-                </div>
-                <div className="stat">
-                  <span className="people-icon">&#9831;</span>
-                  <strong>1,000+</strong>
-                  <small>
-                    Happy Residents
-                    <br />
-                    And Growing
-                  </small>
-                </div>
+                {(homepage?.stats || [])[0] ? (
+                  (homepage.stats || []).map((s, i) => (
+                    <div className="stat" key={i}>
+                      <span className="star">&#10038;</span>
+                      <strong>{s.value}</strong>
+                      <small>
+                        {s.lines.map((line, idx) => (
+                          <span key={idx}>
+                            {line}
+                            <br />
+                          </span>
+                        ))}
+                      </small>
+                    </div>
+                  ))
+                ) : (
+                  <>
+                    <div className="stat">
+                      <span className="star">&#10038;</span>
+                      <strong>12</strong>
+                      <small>
+                        Zodiac Collections
+                        <br />
+                        Unique PG Chains
+                      </small>
+                    </div>
+                    <div className="stat">
+                      <span className="home-icon">&#8962;</span>
+                      <strong>30+</strong>
+                      <small>
+                        Curated Locations
+                        <br />
+                        Across Cities
+                      </small>
+                    </div>
+                    <div className="stat">
+                      <span className="people-icon">&#9831;</span>
+                      <strong>1,000+</strong>
+                      <small>
+                        Happy Residents
+                        <br />
+                        And Growing
+                      </small>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -303,10 +337,7 @@ export default function HomePage() {
                 <span>{comingSoonCollection.name}</span> Collection
               </h2>
               <p>{comingSoonCollection.tone}</p>
-              <p>
-                This zodiac-led PG collection is being curated. Soon, it will have its own homes,
-                imagery, amenities, and story while keeping the same premium IEA Stays experience.
-              </p>
+              <p>{homepage?.coming?.description || "This zodiac-led PG collection is being curated. Soon, it will have its own homes, imagery, amenities, and story while keeping the same premium IEA Stays experience."}</p>
             </div>
           </section>
         </main>

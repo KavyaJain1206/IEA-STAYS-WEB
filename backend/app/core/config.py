@@ -22,6 +22,15 @@ class Settings(BaseSettings):
         default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173"]
     )
 
+    # Media backend: 'local' or 's3'
+    media_backend: str = "local"
+    s3_bucket: str | None = None
+    s3_region: str | None = None
+    s3_endpoint: str | None = None
+    s3_access_key: str | None = None
+    s3_secret_key: str | None = None
+    cdn_base_url: str | None = None
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

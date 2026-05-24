@@ -174,6 +174,9 @@ export default function AdminDashboardPage() {
         <Link className="admin-logout admin-link-button" to="/admin/catalog">
           Manage catalog
         </Link>
+        <Link className="admin-logout admin-link-button" to="/admin/homepage-sections">
+          Manage homepage sections
+        </Link>
       </aside>
 
       <section className="admin-workspace">

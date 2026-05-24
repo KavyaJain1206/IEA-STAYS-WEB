@@ -9,6 +9,7 @@ import VisitPage from "./pages/VisitPage.jsx";
 import AdminLoginPage from "./pages/AdminLoginPage.jsx";
 import AdminDashboardPage from "./pages/AdminDashboardPage.jsx";
 import AdminCatalogPage from "./pages/AdminCatalogPage.jsx";
+import AdminHomepageSectionsPage from "./pages/AdminHomepageSectionsPage.jsx";
 import "./styles.css";
 import "./forms.css";
 import "./admin.css";
@@ -25,6 +26,7 @@ createRoot(document.getElementById("root")).render(
           <Route path="/admin/login" element={<AdminLoginPage />} />
           <Route path="/admin" element={<AdminDashboardPage />} />
           <Route path="/admin/catalog" element={<AdminCatalogPage />} />
+          <Route path="/admin/homepage-sections" element={<AdminHomepageSectionsPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

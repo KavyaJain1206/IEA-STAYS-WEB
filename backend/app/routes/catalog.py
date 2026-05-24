@@ -1,7 +1,4 @@
 from pathlib import Path
-import shutil
-import uuid
-
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm import Session
 
@@ -30,6 +27,7 @@ from app.services.catalog import (
     update_collection,
     update_home,
 )
+from app.services.media import upload_file
 
 public_router = APIRouter(prefix="/catalog", tags=["Catalog"])
 admin_router = APIRouter(prefix="/admin/catalog", tags=["Catalog Admin"])
@@ -37,18 +35,14 @@ UPLOADS_ROOT = Path(__file__).resolve().parents[1] / "static" / "uploads"
 
 
 def _save_catalog_image(file: UploadFile) -> str:
+    # leverage media.upload_file which will save locally and optionally to S3
     if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please upload an image file")
 
-    UPLOADS_ROOT.mkdir(parents=True, exist_ok=True)
-    suffix = Path(file.filename or "").suffix.lower() or ".jpg"
-    filename = f"catalog-{uuid.uuid4().hex}{suffix}"
-    destination = UPLOADS_ROOT / filename
-
-    with destination.open("wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-
-    return f"/uploads/{filename}"
+    try:
+        return upload_file(file)
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
 
 
 @public_router.get("/collections", response_model=list[CatalogCollectionRead])

@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
 from app.core.config import get_settings
-from app.routes import admin, catalog, residents, visits
+from app.routes import admin, catalog, residents, visits, homepage, media, homepage_sections
 
 settings = get_settings()
 
@@ -33,6 +33,10 @@ app.include_router(residents.router, prefix=settings.api_v1_prefix)
 app.include_router(admin.router, prefix=settings.api_v1_prefix)
 app.include_router(catalog.public_router, prefix=settings.api_v1_prefix)
 app.include_router(catalog.admin_router, prefix=settings.api_v1_prefix)
+app.include_router(homepage.public_router, prefix=settings.api_v1_prefix)
+app.include_router(homepage.admin_router, prefix=settings.api_v1_prefix)
+app.include_router(media.router, prefix=settings.api_v1_prefix)
+app.include_router(homepage_sections.router, prefix=settings.api_v1_prefix)
 
 
 @app.get("/health", tags=["Health"])
