@@ -108,7 +108,43 @@ export default function Navbar() {
           </button>
           {isAdminDropdownOpen && (
             <div className="admin-dropdown-menu">
-              {isAdminLoggedIn ? (
+              {!isResidentLoggedIn && !isAdminLoggedIn && (
+                <>
+                  <div className="admin-dropdown-header">Resident Portal</div>
+                  <Link to="/login" onClick={closeMenus}>
+                    Login
+                  </Link>
+                  <Link to="/signup" onClick={closeMenus}>
+                    Sign up
+                  </Link>
+                  <div className="admin-dropdown-header">Admin Portal</div>
+                  <Link to="/admin/login" onClick={closeMenus}>
+                    Admin Login
+                  </Link>
+                  <Link to="/admin/signup" onClick={closeMenus}>
+                    Admin Signup
+                  </Link>
+                </>
+              )}
+              {isResidentLoggedIn && (
+                <>
+                  <div className="admin-dropdown-header">Resident Portal</div>
+                  <Link to="/visit" onClick={closeMenus}>
+                    Book Visit
+                  </Link>
+                  <button className="admin-dropdown-logout" type="button" onClick={handleLogout}>
+                    Log out
+                  </button>
+                  <div className="admin-dropdown-header">Admin Portal</div>
+                  <Link to="/admin/login" onClick={closeMenus}>
+                    Admin Login
+                  </Link>
+                  <Link to="/admin/signup" onClick={closeMenus}>
+                    Admin Signup
+                  </Link>
+                </>
+              )}
+              {isAdminLoggedIn && (
                 <>
                   <div className="admin-dropdown-header">Admin Portal</div>
                   <Link to="/admin" onClick={closeMenus}>
@@ -117,15 +153,6 @@ export default function Navbar() {
                   <button className="admin-dropdown-logout" type="button" onClick={handleLogout}>
                     Admin Logout
                   </button>
-                </>
-              ) : (
-                <>
-                  <Link to="/admin/login" onClick={closeMenus}>
-                    Admin Login
-                  </Link>
-                  <Link to="/admin/signup" onClick={closeMenus}>
-                    Admin Signup
-                  </Link>
                 </>
               )}
             </div>
