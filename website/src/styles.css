@@ -1293,10 +1293,18 @@ body.home-route .site-frame {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
+    margin-top: 20px;
   }
 
   .btn {
     width: auto;
+    gap: 8px;
+    font-size: 13px;
+    padding: 0 8px;
+  }
+
+  .btn span {
+    font-size: 16px;
   }
 
   .stats-row {
