@@ -182,11 +182,24 @@ export default function HomePage() {
   });
 
   const visibleHomes = selectedHomes.length ? selectedHomes : homes;
+
   const featuredHomes = featuredHomeIds.length
     ? homes.filter((home) => featuredHomeIds.includes(String(home.id)))
     : [];
-  const homesToRender = featuredHomes.length ? featuredHomes : visibleHomes;
-  const heroVisitHref = buildVisitSearchParams({ collection: selectedCollection, home: homesToRender[0] || visibleHomes[0] || null });
+
+  // Ensure featured homes never override the selected collection filtering.
+  const featuredHomesFiltered = featuredHomes.filter(
+    (home) => !home.collectionSlug || home.collectionSlug === selectedCollection.slug
+  );
+
+  const homesToRender = featuredHomesFiltered.length
+    ? featuredHomesFiltered
+    : visibleHomes;
+
+  const heroVisitHref = buildVisitSearchParams({
+    collection: selectedCollection,
+    home: homesToRender[0] || visibleHomes[0] || null,
+  });
   const heroSecondaryHref = homepage?.hero?.cta_secondary_href && homepage.hero.cta_secondary_href !== "/visit"
     ? homepage.hero.cta_secondary_href
     : heroVisitHref;
