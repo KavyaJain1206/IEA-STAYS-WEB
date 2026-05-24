@@ -188,13 +188,13 @@ export default function HomePage() {
     : [];
 
   // Ensure featured homes never override the selected collection filtering.
+  // If a featured home doesn't belong to the selected collection, drop it.
+  // If nothing remains, fall back to `visibleHomes` (selected-collection homes only).
   const featuredHomesFiltered = featuredHomes.filter(
-    (home) => !home.collectionSlug || home.collectionSlug === selectedCollection.slug
+    (home) => home.collectionSlug === selectedCollection.slug
   );
 
-  const homesToRender = featuredHomesFiltered.length
-    ? featuredHomesFiltered
-    : visibleHomes;
+  const homesToRender = visibleHomes;
 
   const heroVisitHref = buildVisitSearchParams({
     collection: selectedCollection,
