@@ -181,7 +181,7 @@ export default function HomePage() {
     return home.collectionSlug === selectedCollection.slug;
   });
 
-  const visibleHomes = selectedHomes.length ? selectedHomes : homes;
+  const visibleHomes = selectedHomes;
 
   const featuredHomes = featuredHomeIds.length
     ? homes.filter((home) => featuredHomeIds.includes(String(home.id)))
@@ -341,22 +341,29 @@ export default function HomePage() {
             <div className="section-title gallery-title-row">
               <h2 id="gallery-title">Explore {selectedCollection.name} Homes</h2>
             </div>
-            <div className="explore-grid">
-              {homesToRender.map((property) => (
-                <PropertyCard
-                  key={property.id}
-                  property={{
-                    ...property,
-                    visitHref: buildVisitSearchParams({
-                      collection: property.collectionSlug
-                        ? collections.find((collection) => collection.slug === property.collectionSlug) || selectedCollection
-                        : selectedCollection,
-                      home: property,
-                    }),
-                  }}
-                />
-              ))}
-            </div>
+            {homesToRender.length > 0 ? (
+              <div className="explore-grid">
+                {homesToRender.map((property) => (
+                  <PropertyCard
+                    key={property.id}
+                    property={{
+                      ...property,
+                      visitHref: buildVisitSearchParams({
+                        collection: property.collectionSlug
+                          ? collections.find((collection) => collection.slug === property.collectionSlug) || selectedCollection
+                          : selectedCollection,
+                        home: property,
+                      }),
+                    }}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="no-homes-message">
+                <p>No homes are currently available in the {selectedCollection.name} Collection.</p>
+                <p>Please select another collection or check back later!</p>
+              </div>
+            )}
           </section>
 
           {homepage?.testimonials?.items?.length ? (

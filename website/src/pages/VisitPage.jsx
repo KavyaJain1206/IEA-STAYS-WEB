@@ -44,18 +44,12 @@ export default function VisitPage() {
 
 
   const visitContext = useMemo(() => {
-    // resolveVisitContext is async (browser ESM); in this page we only need the
-    // resolved values to build copy, so keep rendering stable while pending.
-    // If it’s not resolved yet, fall back to empty context.
-    return {
-      collection: null,
-      home: null,
-      collectionName: "your selected collection",
-      collectionTone: "",
-      collectionSymbol: "",
-      homeName: "",
-    };
-  }, []);
+    return resolveVisitContext({
+      collections,
+      homes,
+      searchParams,
+    });
+  }, [collections, homes, searchParams]);
 
 
   const visitCopy = useMemo(() => buildVisitCopy(visitContext), [visitContext]);
@@ -149,7 +143,7 @@ export default function VisitPage() {
       <FormField required label="Full name" name="name" />
       <FormField required label="Phone number" name="phone" type="tel" />
       <FormField required label="Email" name="email" type="email" />
-      <FormField as="select" label="Preferred home" name="home">
+      <FormField as="select" label="Preferred home" name="home" defaultValue={visitContext.home?.id || ""}>
         {(homes || []).slice(0, 50).map((home) => (
           <option key={String(home.id)} value={home.id}>
             {home.name}
