@@ -95,9 +95,14 @@ export default function HomePage() {
             normalizedCollections.find((collection) => collection.available) ||
             normalizedCollections[0]
           );
-          setComingSoonCollection(
-            normalizedCollections.find((collection) => !collection.available) || null
-          );
+          const firstComingSoon = normalizedCollections.find((collection) => {
+            if (!collection.available) return true;
+            const hasProperties = (homeData || []).some(
+              (home) => (home.collection?.slug || home.collection_slug) === collection.slug
+            );
+            return !hasProperties;
+          });
+          setComingSoonCollection(firstComingSoon || null);
         }
 
         if (homeData?.length) {
@@ -161,7 +166,8 @@ export default function HomePage() {
   };
 
   const handleCollectionSelect = (collection) => {
-    if (!collection.available) {
+    const hasProperties = homes.some((h) => (h.collectionSlug || h.collection?.slug) === collection.slug);
+    if (!collection.available || !hasProperties) {
       setComingSoonCollection(collection);
       document.querySelector("#coming-soon")?.scrollIntoView({ behavior: "smooth", block: "start" });
       showToast(`${collection.name} Collection is coming soon.`);
@@ -180,6 +186,15 @@ export default function HomePage() {
   });
 
   const visibleHomes = selectedHomes;
+
+  const showComingSoon = useMemo(() => {
+    if (!comingSoonCollection) return false;
+    if (!comingSoonCollection.available) return true;
+    const hasProperties = homes.some(
+      (h) => (h.collectionSlug || h.collection?.slug) === comingSoonCollection.slug
+    );
+    return !hasProperties;
+  }, [comingSoonCollection, homes]);
 
   const featuredHomes = featuredHomeIds.length
     ? homes.filter((home) => featuredHomeIds.includes(String(home.id)))
@@ -418,7 +433,7 @@ export default function HomePage() {
             <span className="spark-detail">&#10022;</span>
           </section>
 
-          {comingSoonCollection && !comingSoonCollection.available ? (
+          {showComingSoon ? (
             <section className="coming-soon-section" id="coming-soon" aria-labelledby="coming-soon-title">
               <div className="coming-symbol">{comingSoonCollection.symbol}</div>
               <div>
