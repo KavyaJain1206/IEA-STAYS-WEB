@@ -6,22 +6,6 @@ import {
     ensureCollectionHomeLink,
 } from "./resolvers.js";
 
-// NOTE: legacy name-based matching removed. Identity must be resolved by ID/slug.
-const normalize = (value) => (value || "").trim().toLowerCase();
-
-
-function findMatch(items, value, keys = ["slug", "name", "id"]) {
-    const target = normalize(value);
-    if (!target || !Array.isArray(items)) return null;
-
-    return (
-        items.find((item) =>
-            keys.some((key) => normalize(item?.[key]) === target)
-        ) || null
-    );
-}
-
-
 // Build visit links using stable backend identity (IDs). Avoid name/tone/symbol inference.
 export function buildVisitSearchParams({ collection = null, home = null } = {}) {
     const params = new URLSearchParams();
