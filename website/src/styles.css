@@ -289,7 +289,7 @@ body.home-route .site-frame {
   border-right: 0;
 }
 
-.stat > span:first-child {
+.stat>span:first-child {
   position: absolute;
   left: 0;
   top: 3px;
@@ -660,7 +660,7 @@ body.home-route .site-frame {
   font: 700 24px/1.2 var(--serif);
 }
 
-.home-info > p {
+.home-info>p {
   margin: 0 0 14px;
   color: #4f5652;
   font-size: 12px;
@@ -693,12 +693,12 @@ body.home-route .site-frame {
   margin-bottom: 3px;
 }
 
-.home-info > a {
+.home-info>a {
   color: #9a651a;
   font-size: 12px;
 }
 
-.home-info > a span {
+.home-info>a span {
   padding-left: 11px;
   font-size: 18px;
   vertical-align: -2px;
@@ -854,6 +854,64 @@ body.home-route .site-frame {
   color: #93641b;
 }
 
+.testimonials-section {
+  padding: 0 113px 34px;
+}
+
+.testimonials-intro {
+  margin: 10px 0 0;
+  color: #4f5652;
+  font-size: 15px;
+  line-height: 1.62;
+}
+
+.testimonials-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 22px;
+}
+
+.testimonial-card {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid rgba(189, 140, 54, 0.24);
+  border-radius: 18px;
+  background: rgba(255, 250, 241, 0.82);
+  box-shadow: 0 10px 22px rgba(58, 47, 31, 0.08);
+}
+
+.testimonial-card img {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  object-fit: cover;
+  border: 1px solid rgba(189, 140, 54, 0.24);
+}
+
+.testimonial-card h3 {
+  margin: 0;
+  font: 700 24px/1.05 var(--serif);
+}
+
+.testimonial-card span {
+  display: block;
+  margin-top: 6px;
+  color: #93641b;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.testimonial-card p {
+  margin: 12px 0 0;
+  color: #4f5652;
+  font-size: 15px;
+  line-height: 1.65;
+}
+
 .toast {
   position: fixed;
   left: 50%;
@@ -998,7 +1056,7 @@ body.home-route .site-frame {
     border-bottom: 1px solid rgba(189, 140, 54, 0.34);
   }
 
-  .stat > span:first-child {
+  .stat>span:first-child {
     position: static;
   }
 
@@ -1062,8 +1120,8 @@ body.home-route .site-frame {
     font-size: 22px;
   }
 
-  .home-info > p,
-  .home-info > a {
+  .home-info>p,
+  .home-info>a {
     font-size: 13px;
   }
 
@@ -1114,6 +1172,14 @@ body.home-route .site-frame {
     justify-items: center;
     padding: 60px 24px;
     text-align: center;
+  }
+
+  .testimonials-section {
+    padding: 0 20px 28px;
+  }
+
+  .testimonials-grid {
+    grid-template-columns: 1fr;
   }
 
   .coming-soon-section h2 {

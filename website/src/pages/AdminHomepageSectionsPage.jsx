@@ -3,48 +3,29 @@ import { Link, useNavigate } from "react-router-dom";
 import {
     createHomepageSection,
     deleteHomepageSection,
+    getAdminProfile,
+    listAdminCollections,
+    listAdminHomes,
     listHomepageSections,
     updateHomepageSection,
-    getAdminProfile,
+    uploadAdminCatalogImage,
 } from "../services/api.js";
-
-const emptyForm = {
-    key: "",
-    type: "hero",
-    title: "",
-    content_json: "",
-    is_active: true,
-    sort_order: 0,
-};
-
-function formatPrettyJson(value) {
-    if (!value) return "";
-    try {
-        return JSON.stringify(JSON.parse(value), null, 2);
-    } catch {
-        return value;
-    }
-}
-
-function normalizeJsonInput(value) {
-    if (!value) return "";
-    try {
-        return JSON.stringify(JSON.parse(value));
-    } catch {
-        return value;
-    }
-}
+import { HomepageSectionEditor } from "../components/admin/homepage/HomepageSectionEditor.jsx";
+import { HomepageSectionList } from "../components/admin/homepage/HomepageSectionList.jsx";
+import { SECTION_TYPES, createEmptyDraft, draftFromSection, serializeDraft, validateDraft } from "../components/admin/homepage/sectionRegistry.js";
 
 export default function AdminHomepageSectionsPage() {
     const navigate = useNavigate();
     const token = useMemo(() => localStorage.getItem("ieaAdminToken"), []);
     const [admin, setAdmin] = useState(null);
     const [sections, setSections] = useState([]);
+    const [collections, setCollections] = useState([]);
+    const [homes, setHomes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState("");
-    const [editingId, setEditingId] = useState(null);
-    const [form, setForm] = useState(emptyForm);
+    const [draft, setDraft] = useState(null);
+    const [pendingType, setPendingType] = useState("hero");
 
     useEffect(() => {
         document.body.classList.add("admin-route");
@@ -59,21 +40,50 @@ export default function AdminHomepageSectionsPage() {
 
         const load = async () => {
             try {
-                const [profile, sectionData] = await Promise.all([
+                const [profile, sectionData, collectionData, homeData] = await Promise.all([
                     getAdminProfile(token),
                     listHomepageSections({ includeInactive: true }),
+                    listAdminCollections(token, { includeInactive: true }),
+                    listAdminHomes(token, { includeInactive: true }),
                 ]);
+
                 setAdmin(profile);
                 setSections(sectionData || []);
+                setCollections(collectionData || []);
+                setHomes(homeData || []);
+
+                if (!draft && !(sectionData || []).length) {
+                    setPendingType("hero");
+                    setDraft(createEmptyDraft("hero"));
+                }
             } catch (error) {
-                setMessage(error.message || "Unable to load homepage sections.");
+                setMessage(error.message || "Unable to load homepage content.");
             } finally {
                 setLoading(false);
             }
         };
 
         load();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [navigate, token]);
+
+    const catalog = useMemo(() => {
+        const collectionsById = Object.fromEntries(collections.map((collection) => [String(collection.id), collection]));
+        const homesById = Object.fromEntries(homes.map((home) => [String(home.id), home]));
+        return { collections, homes, collectionsById, homesById };
+    }, [collections, homes]);
+
+    const existingTypes = new Set(sections.map((section) => section.type));
+    const availableTypes = SECTION_TYPES.filter((entry) => !existingTypes.has(entry.type)).map((entry) => ({
+        label: entry.label,
+        value: entry.type,
+        description: entry.description,
+    }));
+
+    useEffect(() => {
+        if (!availableTypes.length) return;
+        setPendingType((current) => (availableTypes.some((option) => option.value === current) ? current : availableTypes[0].value));
+    }, [availableTypes]);
 
     const activeCount = sections.filter((section) => section.is_active).length;
 
@@ -81,55 +91,56 @@ export default function AdminHomepageSectionsPage() {
         return [...sections].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.id - b.id);
     }, [sections]);
 
-    const startCreate = () => {
-        setEditingId(null);
-        setForm(emptyForm);
+    const refresh = async () => {
+        const [sectionData, collectionData, homeData] = await Promise.all([
+            listHomepageSections({ includeInactive: true }),
+            listAdminCollections(token, { includeInactive: true }),
+            listAdminHomes(token, { includeInactive: true }),
+        ]);
+        setSections(sectionData || []);
+        setCollections(collectionData || []);
+        setHomes(homeData || []);
+    };
+
+    const startCreate = (type = availableTypes[0]?.value || "hero") => {
+        setPendingType(type);
+        setDraft(createEmptyDraft(type));
         setMessage("");
     };
 
     const startEdit = (section) => {
-        setEditingId(section.id);
-        setForm({
-            key: section.key,
-            type: section.type,
-            title: section.title || "",
-            content_json: formatPrettyJson(section.content_json),
-            is_active: Boolean(section.is_active),
-            sort_order: section.sort_order ?? 0,
-        });
+        setDraft(draftFromSection(section));
         setMessage("");
     };
 
-    const refreshSections = async () => {
-        const data = await listHomepageSections({ includeInactive: true });
-        setSections(data || []);
+    const clearDraft = () => {
+        setDraft(null);
+        setMessage("");
     };
 
-    const handleSubmit = async (event) => {
-        event.preventDefault();
-        if (!token) return;
+    const handleSave = async () => {
+        if (!draft || !token) return;
+
+        const error = validateDraft(draft);
+        if (error) {
+            setMessage(error);
+            return;
+        }
 
         setSaving(true);
         setMessage("");
         try {
-            const payload = {
-                key: form.key.trim(),
-                type: form.type.trim(),
-                title: form.title.trim() || null,
-                content_json: normalizeJsonInput(form.content_json),
-                is_active: form.is_active,
-                sort_order: Number(form.sort_order) || 0,
-            };
-
-            if (editingId) {
-                await updateHomepageSection(token, editingId, payload);
+            const payload = serializeDraft(draft);
+            if (draft.id) {
+                await updateHomepageSection(token, draft.id, payload);
+                setMessage(`${draft.type} section updated.`);
             } else {
                 await createHomepageSection(token, payload);
+                setMessage(`${draft.type} section created.`);
             }
 
-            await refreshSections();
-            startCreate();
-            setMessage(editingId ? "Section updated." : "Section created.");
+            await refresh();
+            clearDraft();
         } catch (error) {
             setMessage(error.message || "Unable to save section.");
         } finally {
@@ -138,31 +149,27 @@ export default function AdminHomepageSectionsPage() {
     };
 
     const handleToggle = async (section) => {
-        setMessage("");
         try {
             await updateHomepageSection(token, section.id, { is_active: !section.is_active });
-            await refreshSections();
+            await refresh();
         } catch (error) {
             setMessage(error.message || "Unable to update visibility.");
         }
     };
 
     const handleDelete = async (section) => {
-        if (!confirm(`Delete ${section.key}?`)) return;
-        setMessage("");
+        if (!window.confirm(`Delete ${section.type} content?`)) return;
         try {
             await deleteHomepageSection(token, section.id);
-            await refreshSections();
-            if (editingId === section.id) {
-                startCreate();
-            }
+            await refresh();
+            if (draft?.id === section.id) clearDraft();
         } catch (error) {
             setMessage(error.message || "Unable to delete section.");
         }
     };
 
     if (loading) {
-        return <div className="admin-empty">Loading homepage sections...</div>;
+        return <div className="admin-empty">Loading homepage content...</div>;
     }
 
     return (
@@ -174,9 +181,9 @@ export default function AdminHomepageSectionsPage() {
 
                 <div>
                     <p className="admin-kicker">Homepage CMS</p>
-                    <h1>Sections</h1>
+                    <h1>Content</h1>
                     <p className="admin-sidebar-copy">
-                        Control ordering, visibility, and reusable homepage blocks without touching the frontend.
+                        Manage the homepage as website content, not as technical data structures.
                     </p>
                 </div>
 
@@ -192,7 +199,7 @@ export default function AdminHomepageSectionsPage() {
                 <header className="admin-header">
                     <div>
                         <p className="admin-kicker">Homepage Builder</p>
-                        <h2>Homepage Sections</h2>
+                        <h2>Homepage content</h2>
                     </div>
                     <div className="admin-profile">
                         <span>{admin?.full_name || "Admin"}</span>
@@ -206,12 +213,12 @@ export default function AdminHomepageSectionsPage() {
                         <strong>{sections.length}</strong>
                     </article>
                     <article>
-                        <span>Active</span>
+                        <span>Visible</span>
                         <strong>{activeCount}</strong>
                     </article>
                     <article>
-                        <span>Editing</span>
-                        <strong>{editingId ? "Update mode" : "Create mode"}</strong>
+                        <span>Ready</span>
+                        <strong>{draft ? "Editing" : "Browse"}</strong>
                     </article>
                 </div>
 
@@ -221,141 +228,83 @@ export default function AdminHomepageSectionsPage() {
                     <section className="admin-page-card">
                         <div className="admin-page-card-head">
                             <div>
-                                <p className="admin-kicker">Editor</p>
-                                <h3>{editingId ? "Edit section" : "Create section"}</h3>
+                                <p className="admin-kicker">Create new content</p>
+                                <h3>Start a section</h3>
                                 <p className="admin-page-card-copy">
-                                    Keep the existing homepage shape, but move each block into a reusable CMS-managed section.
+                                    Choose a homepage block and fill in the website fields. No JSON editing required.
                                 </p>
                             </div>
+
                             <div className="admin-page-actions">
-                                <button className="admin-secondary" type="button" onClick={startCreate}>
-                                    Reset form
+                                <select
+                                    className="admin-secondary"
+                                    value={pendingType}
+                                    onChange={(event) => setPendingType(event.target.value)}
+                                    disabled={!availableTypes.length}
+                                >
+                                    {availableTypes.length ? (
+                                        availableTypes.map((option) => (
+                                            <option key={option.value} value={option.value}>
+                                                {option.label}
+                                            </option>
+                                        ))
+                                    ) : (
+                                        <option value="">All section types already exist</option>
+                                    )}
+                                </select>
+                                <button className="admin-primary" type="button" onClick={() => startCreate(pendingType || availableTypes[0]?.value || "hero")}
+                                    disabled={!availableTypes.length}
+                                >
+                                    Add section
                                 </button>
-                            </div>
-                        </div>
-
-                        <form className="admin-page-card-body" onSubmit={handleSubmit}>
-                            <div className="admin-section-create">
-                                <div className="admin-form-row">
-                                    <label htmlFor="section-key">Key</label>
-                                    <input
-                                        id="section-key"
-                                        value={form.key}
-                                        onChange={(event) => setForm({ ...form, key: event.target.value })}
-                                        placeholder="hero, stats, promises, coming"
-                                        disabled={Boolean(editingId)}
-                                    />
-                                </div>
-
-                                <div className="admin-form-row">
-                                    <label htmlFor="section-type">Type</label>
-                                    <select
-                                        id="section-type"
-                                        value={form.type}
-                                        onChange={(event) => setForm({ ...form, type: event.target.value })}
-                                    >
-                                        <option value="hero">hero</option>
-                                        <option value="stats">stats</option>
-                                        <option value="promises">promises</option>
-                                        <option value="coming">coming</option>
-                                        <option value="custom">custom</option>
-                                    </select>
-                                </div>
-
-                                <div className="admin-form-row">
-                                    <label htmlFor="section-title">Title</label>
-                                    <input
-                                        id="section-title"
-                                        value={form.title}
-                                        onChange={(event) => setForm({ ...form, title: event.target.value })}
-                                        placeholder="Optional heading or section label"
-                                    />
-                                </div>
-
-                                <div className="admin-form-row">
-                                    <label htmlFor="section-order">Ordering</label>
-                                    <input
-                                        id="section-order"
-                                        type="number"
-                                        value={form.sort_order}
-                                        onChange={(event) => setForm({ ...form, sort_order: event.target.value })}
-                                    />
-                                </div>
-
-                                <div className="admin-form-row">
-                                    <label htmlFor="section-json">Content JSON</label>
-                                    <textarea
-                                        id="section-json"
-                                        value={form.content_json}
-                                        onChange={(event) => setForm({ ...form, content_json: event.target.value })}
-                                        placeholder='{"subtitle":"..."}'
-                                    />
-                                </div>
-
-                                <div className="admin-form-row">
-                                    <label htmlFor="section-active">Visibility</label>
-                                    <select
-                                        id="section-active"
-                                        value={String(form.is_active)}
-                                        onChange={(event) => setForm({ ...form, is_active: event.target.value === "true" })}
-                                    >
-                                        <option value="true">Active</option>
-                                        <option value="false">Hidden</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div className="admin-page-actions" style={{ marginTop: 16 }}>
-                                <button className="admin-primary" type="submit" disabled={saving}>
-                                    {saving ? "Saving..." : editingId ? "Update section" : "Create section"}
-                                </button>
-                            </div>
-                        </form>
-                    </section>
-
-                    <section className="admin-page-card">
-                        <div className="admin-page-card-head">
-                            <div>
-                                <p className="admin-kicker">Sections</p>
-                                <h3>Reusable homepage blocks</h3>
-                                <p className="admin-page-card-copy">
-                                    Toggle visibility, update ordering, or edit a section in place.
-                                </p>
                             </div>
                         </div>
 
                         <div className="admin-page-card-body">
-                            <div className="admin-section-list">
-                                {sortedSections.map((section) => (
-                                    <article className="admin-section-item" key={section.id}>
-                                        <div>
-                                            <strong>{section.key}</strong>
-                                            <div className="admin-section-meta">
-                                                <span className="admin-pill">{section.type}</span>
-                                                <span className="admin-pill">Order {section.sort_order ?? 0}</span>
-                                                <span className="admin-pill">{section.is_active ? "Visible" : "Hidden"}</span>
-                                            </div>
-                                            {section.title ? <p className="admin-page-card-copy">{section.title}</p> : null}
-                                        </div>
-
-                                        <div className="admin-section-actions">
-                                            <button className="admin-small" type="button" onClick={() => startEdit(section)}>
-                                                Edit
-                                            </button>
-                                            <button className="admin-small" type="button" onClick={() => handleToggle(section)}>
-                                                {section.is_active ? "Hide" : "Show"}
-                                            </button>
-                                            <button className="admin-danger" type="button" onClick={() => handleDelete(section)}>
-                                                Delete
-                                            </button>
-                                        </div>
-                                    </article>
-                                ))}
-                            </div>
-
-                            {!sortedSections.length ? <p className="admin-empty">No homepage sections found.</p> : null}
+                            <p className="admin-muted">
+                                Supported section types: {SECTION_TYPES.map((entry) => entry.label).join(", ")}.
+                            </p>
                         </div>
                     </section>
+
+                    {draft ? (
+                        <HomepageSectionEditor
+                            draft={draft}
+                            onDraftChange={setDraft}
+                            catalog={catalog}
+                            token={token}
+                            onUploadImage={uploadAdminCatalogImage}
+                            availableTypes={availableTypes}
+                        />
+                    ) : null}
+
+                    {draft ? (
+                        <section className="admin-page-card">
+                            <div className="admin-page-card-head">
+                                <div>
+                                    <p className="admin-kicker">Actions</p>
+                                    <h3>Save changes</h3>
+                                    <p className="admin-page-card-copy">Save when the content reads like website copy, not database data.</p>
+                                </div>
+                            </div>
+                            <div className="admin-page-card-body admin-page-actions">
+                                <button className="admin-primary" type="button" disabled={saving} onClick={handleSave}>
+                                    {saving ? "Saving..." : draft.id ? "Update section" : "Create section"}
+                                </button>
+                                <button className="admin-secondary" type="button" onClick={clearDraft}>
+                                    Cancel
+                                </button>
+                            </div>
+                        </section>
+                    ) : null}
+
+                    <HomepageSectionList
+                        sections={sortedSections}
+                        catalog={catalog}
+                        onEdit={startEdit}
+                        onToggle={handleToggle}
+                        onDelete={handleDelete}
+                    />
                 </div>
             </section>
         </main>

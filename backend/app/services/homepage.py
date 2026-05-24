@@ -101,19 +101,37 @@ def get_homepage(db: Session) -> dict:
         composed: dict = {}
         for sec in sections:
             try:
+                content = json.loads(sec.content_json) if sec.content_json else {}
                 # core section types map to the existing response shape
                 if sec.type == "hero":
-                    composed["hero_title"] = sec.title or None
-                    composed["hero_subtitle"] = json.loads(sec.content_json).get("subtitle") if sec.content_json else None
+                    hero = {
+                        "title": sec.title or content.get("title") or DEFAULT_HOMEPAGE["hero_title"],
+                        "description": content.get("description") or content.get("subtitle") or DEFAULT_HOMEPAGE["hero_subtitle"],
+                        "cta_primary_text": content.get("cta_primary_text") or "Explore Homes",
+                        "cta_primary_href": content.get("cta_primary_href") or "#homes",
+                        "cta_secondary_text": content.get("cta_secondary_text") or "Book a Visit",
+                        "cta_secondary_href": content.get("cta_secondary_href") or "/visit",
+                        "image_src": content.get("image_src") or "",
+                        "image_alt": content.get("image_alt") or "",
+                    }
+                    composed["hero"] = hero
+                    composed["hero_title"] = hero["title"]
+                    composed["hero_subtitle"] = hero["description"]
                 elif sec.type == "stats":
-                    composed["stats"] = json.loads(sec.content_json) if sec.content_json else None
+                    composed["stats"] = content.get("items") if isinstance(content, dict) else content
                 elif sec.type == "promises":
-                    composed["promises"] = json.loads(sec.content_json) if sec.content_json else None
+                    composed["promises"] = content.get("items") if isinstance(content, dict) else content
                 elif sec.type == "coming":
-                    composed["coming"] = json.loads(sec.content_json) if sec.content_json else None
+                    composed["coming"] = content
+                elif sec.type == "featured_homes":
+                    composed["featured_homes"] = content
+                elif sec.type == "featured_collections":
+                    composed["featured_collections"] = content
+                elif sec.type == "testimonials":
+                    composed["testimonials"] = content
                 else:
                     # custom sections are added under their key
-                    composed[sec.key] = json.loads(sec.content_json) if sec.content_json else None
+                    composed[sec.key] = content
             except Exception:
                 # if a section's JSON is malformed, skip it to preserve public UX
                 continue
@@ -121,6 +139,19 @@ def get_homepage(db: Session) -> dict:
         if "hero_title" not in composed or "hero_subtitle" not in composed:
             legacy = db.scalar(select(HomepageContent).limit(1))
             if legacy:
+                composed.setdefault(
+                    "hero",
+                    {
+                        "title": legacy.hero_title,
+                        "description": legacy.hero_subtitle,
+                        "cta_primary_text": "Explore Homes",
+                        "cta_primary_href": "#homes",
+                        "cta_secondary_text": "Book a Visit",
+                        "cta_secondary_href": "/visit",
+                        "image_src": "",
+                        "image_alt": "",
+                    },
+                )
                 composed.setdefault("hero_title", legacy.hero_title)
                 composed.setdefault("hero_subtitle", legacy.hero_subtitle)
         return composed

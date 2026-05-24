@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import Footer from "../components/Footer.jsx";
 import Navbar from "../components/Navbar.jsx";
@@ -20,6 +20,26 @@ export default function HomePage() {
   const [toastVisible, setToastVisible] = useState(false);
   const frameRef = useRef(null);
   const toastTimer = useRef(null);
+
+  const featuredCollectionIds = useMemo(
+    () => (homepage?.featured_collections?.collection_ids || []).map(String),
+    [homepage]
+  );
+  const featuredHomeIds = useMemo(
+    () => (homepage?.featured_homes?.home_ids || []).map(String),
+    [homepage]
+  );
+
+  const displayCollections = useMemo(() => {
+    if (!collections.length) return zodiacCollections;
+    if (!featuredCollectionIds.length) return collections;
+
+    const featured = featuredCollectionIds
+      .map((id) => collections.find((collection) => String(collection.id) === id))
+      .filter(Boolean);
+    const rest = collections.filter((collection) => !featuredCollectionIds.includes(String(collection.id)));
+    return [...featured, ...rest];
+  }, [collections, featuredCollectionIds]);
 
   useEffect(() => {
     const fitReplicaToViewport = () => {
@@ -124,6 +144,16 @@ export default function HomePage() {
     })();
   }, []);
 
+  useEffect(() => {
+    if (!featuredCollectionIds.length || !displayCollections.length) return;
+
+    setSelectedCollection((current) => {
+      const featured = displayCollections.find((collection) => featuredCollectionIds.includes(String(collection.id)));
+      if (!featured) return current;
+      return current?.slug === featured.slug ? current : featured;
+    });
+  }, [displayCollections, featuredCollectionIds]);
+
   const showToast = (message) => {
     setToastMessage(message);
     setToastVisible(true);
@@ -151,6 +181,10 @@ export default function HomePage() {
   });
 
   const visibleHomes = selectedHomes.length ? selectedHomes : homes;
+  const featuredHomes = featuredHomeIds.length
+    ? homes.filter((home) => featuredHomeIds.includes(String(home.id)))
+    : [];
+  const homesToRender = featuredHomes.length ? featuredHomes : visibleHomes;
 
   return (
     <>
@@ -159,22 +193,22 @@ export default function HomePage() {
 
         <main id="home">
           <ZodiacSelector
-            collections={zodiacCollections}
+            collections={displayCollections}
             selectedName={selectedCollection.name}
             onSelect={handleCollectionSelect}
           />
 
           <section className="hero-row" aria-labelledby="hero-title">
             <div className="hero-copy">
-              <h1 id="hero-title">{homepage?.hero_title || "Premium PG stays, shaped around comfort and belonging."}<span>&#10022;</span></h1>
-              <p>{homepage?.hero_subtitle || "IEA Stays Live brings you a chain of refined PG homes, each inspired by a zodiac sign and crafted for modern living, community, and peace of mind."}</p>
+              <h1 id="hero-title">{homepage?.hero?.title || homepage?.hero_title || "Premium PG stays, shaped around comfort and belonging."}<span>&#10022;</span></h1>
+              <p>{homepage?.hero?.description || homepage?.hero_subtitle || "IEA Stays Live brings you a chain of refined PG homes, each inspired by a zodiac sign and crafted for modern living, community, and peace of mind."}</p>
 
               <div className="cta-row">
-                <a className="btn primary" href="#homes">
-                  Explore Homes <span>&rarr;</span>
+                <a className="btn primary" href={homepage?.hero?.cta_primary_href || "#homes"}>
+                  {homepage?.hero?.cta_primary_text || "Explore Homes"} <span>&rarr;</span>
                 </a>
-                <Link className="btn secondary" to="/visit">
-                  Book a Visit <span>&rarr;</span>
+                <Link className="btn secondary" to={homepage?.hero?.cta_secondary_href || "/visit"}>
+                  {homepage?.hero?.cta_secondary_text || "Book a Visit"} <span>&rarr;</span>
                 </Link>
               </div>
 
@@ -290,11 +324,32 @@ export default function HomePage() {
               <h2 id="gallery-title">Explore {selectedCollection.name} Homes</h2>
             </div>
             <div className="explore-grid">
-              {visibleHomes.map((property) => (
+              {homesToRender.map((property) => (
                 <PropertyCard key={property.id} property={property} />
               ))}
             </div>
           </section>
+
+          {homepage?.testimonials?.items?.length ? (
+            <section className="testimonials-section" aria-labelledby="testimonials-title">
+              <div className="section-title gallery-title-row">
+                <h2 id="testimonials-title">{homepage.testimonials.title || "Testimonials"}</h2>
+              </div>
+              <p className="testimonials-intro">{homepage.testimonials.description}</p>
+              <div className="testimonials-grid">
+                {homepage.testimonials.items.map((item, index) => (
+                  <article className="testimonial-card" key={`${item.name || index}-${index}`}>
+                    {item.image_src ? <img src={item.image_src} alt={item.image_alt || item.name || "Resident"} /> : null}
+                    <div>
+                      <h3>{item.name}</h3>
+                      <span>{item.role}</span>
+                      <p>{item.quote}</p>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ) : null}
 
           <section className="promise-strip" id="services" aria-label="Service promises">
             <article>
