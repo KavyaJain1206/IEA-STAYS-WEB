@@ -168,15 +168,17 @@ export default function AdminDashboardPage() {
             Track enquiries, review resident applications, and keep follow-ups moving.
           </p>
         </div>
-        <button className="admin-logout" type="button" onClick={handleLogout}>
-          Log out
-        </button>
-        <Link className="admin-logout admin-link-button" to="/admin/catalog">
-          Manage catalog
-        </Link>
-        <Link className="admin-logout admin-link-button" to="/admin/homepage-sections">
-          Manage homepage sections
-        </Link>
+        <div className="admin-sidebar-actions">
+          <button className="admin-logout" type="button" onClick={handleLogout}>
+            Log out
+          </button>
+          <Link className="admin-logout admin-link-button" to="/admin/catalog">
+            Manage catalog
+          </Link>
+          <Link className="admin-logout admin-link-button" to="/admin/homepage-sections">
+            Manage homepage sections
+          </Link>
+        </div>
       </aside>
 
       <section className="admin-workspace">

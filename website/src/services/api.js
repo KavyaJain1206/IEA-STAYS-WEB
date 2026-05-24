@@ -148,8 +148,14 @@ export function getHomepageContent() {
   return request("/homepage");
 }
 
-export function listHomepageSections() {
-  return request("/homepage/sections/");
+export function listHomepageSections(params = {}) {
+  const query = new URLSearchParams();
+  if (params.includeInactive) {
+    query.set("include_inactive", "true");
+  }
+
+  const suffix = query.toString() ? `?${query.toString()}` : "";
+  return request(`/homepage/sections/${suffix}`);
 }
 
 export function createHomepageSection(token, payload) {
