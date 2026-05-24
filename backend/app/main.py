@@ -5,7 +5,7 @@ from pathlib import Path
 
 from app.core.config import get_settings
 from app.database.session import SessionLocal
-from app.routes import admin, catalog, residents, visits, homepage, media, homepage_sections
+from app.routes import admin, catalog, residents, visits, homepage, media, homepage_sections, admin_exports
 from app.services.catalog_seed import ensure_zodiac_starter_collections
 
 settings = get_settings()
