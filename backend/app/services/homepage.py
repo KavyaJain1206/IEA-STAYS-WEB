@@ -135,25 +135,42 @@ def get_homepage(db: Session) -> dict:
             except Exception:
                 # if a section's JSON is malformed, skip it to preserve public UX
                 continue
-        # ensure hero fields exist by falling back to legacy HomepageContent
-        if "hero_title" not in composed or "hero_subtitle" not in composed:
-            legacy = db.scalar(select(HomepageContent).limit(1))
-            if legacy:
-                composed.setdefault(
-                    "hero",
-                    {
-                        "title": legacy.hero_title,
-                        "description": legacy.hero_subtitle,
-                        "cta_primary_text": "Explore Homes",
-                        "cta_primary_href": "#homes",
-                        "cta_secondary_text": "Book a Visit",
-                        "cta_secondary_href": "/visit",
-                        "image_src": "",
-                        "image_alt": "",
-                    },
-                )
-                composed.setdefault("hero_title", legacy.hero_title)
-                composed.setdefault("hero_subtitle", legacy.hero_subtitle)
+        # ensure the response always satisfies the legacy schema
+        legacy = db.scalar(select(HomepageContent).limit(1))
+        fallback_homepage = legacy or HomepageContent(
+            hero_title=DEFAULT_HOMEPAGE["hero_title"],
+            hero_subtitle=DEFAULT_HOMEPAGE["hero_subtitle"],
+            stats_json=json.dumps(DEFAULT_HOMEPAGE["stats"]),
+            promises_json=json.dumps(DEFAULT_HOMEPAGE["promises"]),
+            coming_json=json.dumps(DEFAULT_HOMEPAGE["coming"]),
+        )
+        composed.setdefault(
+            "hero",
+            {
+                "title": fallback_homepage.hero_title,
+                "description": fallback_homepage.hero_subtitle,
+                "cta_primary_text": "Explore Homes",
+                "cta_primary_href": "#homes",
+                "cta_secondary_text": "Book a Visit",
+                "cta_secondary_href": "/visit",
+                "image_src": "",
+                "image_alt": "",
+            },
+        )
+        composed.setdefault("hero_title", fallback_homepage.hero_title)
+        composed.setdefault("hero_subtitle", fallback_homepage.hero_subtitle)
+        composed.setdefault(
+            "stats",
+            json.loads(fallback_homepage.stats_json) if getattr(fallback_homepage, "stats_json", None) else DEFAULT_HOMEPAGE["stats"],
+        )
+        composed.setdefault(
+            "promises",
+            json.loads(fallback_homepage.promises_json) if getattr(fallback_homepage, "promises_json", None) else DEFAULT_HOMEPAGE["promises"],
+        )
+        composed.setdefault(
+            "coming",
+            json.loads(fallback_homepage.coming_json) if getattr(fallback_homepage, "coming_json", None) else DEFAULT_HOMEPAGE["coming"],
+        )
         return composed
 
     # legacy single-row behavior for sites that haven't migrated
