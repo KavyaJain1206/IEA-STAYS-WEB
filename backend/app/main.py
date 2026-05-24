@@ -39,6 +39,7 @@ app.include_router(homepage.public_router, prefix=settings.api_v1_prefix)
 app.include_router(homepage.admin_router, prefix=settings.api_v1_prefix)
 app.include_router(media.router, prefix=settings.api_v1_prefix)
 app.include_router(homepage_sections.router, prefix=settings.api_v1_prefix)
+app.include_router(admin_exports.router, prefix=settings.api_v1_prefix)
 
 
 @app.on_event("startup")

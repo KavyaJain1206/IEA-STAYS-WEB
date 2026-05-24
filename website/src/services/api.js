@@ -279,3 +279,62 @@ export function deleteAdminHome(token, homeId) {
     headers: authHeaders(token),
   });
 }
+
+export async function downloadAdminExport(token, target, params = {}) {
+  const query = new URLSearchParams();
+  if (params.format) query.set("format", params.format);
+  if (params.filterType) query.set("filter_type", params.filterType);
+  if (params.startDate) query.set("start_date", params.startDate);
+  if (params.endDate) query.set("end_date", params.endDate);
+
+  const response = await fetch(`${API_BASE_URL}/admin/exports/${target}?${query.toString()}`, {
+    headers: authHeaders(token),
+  });
+  
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || "Failed to download export file");
+  }
+
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.setAttribute("download", `${target}_export.${params.format === "csv" ? "csv" : "json"}`);
+  document.body.appendChild(link);
+  link.click();
+  link.parentNode.removeChild(link);
+}
+
+export function listAdminBackups(token) {
+  return request("/admin/backups/list", {
+    headers: authHeaders(token),
+  });
+}
+
+export function triggerAdminBackup(token) {
+  return request("/admin/backups/trigger", {
+    method: "POST",
+    headers: authHeaders(token),
+  });
+}
+
+export async function downloadAdminBackup(token, filename) {
+  const response = await fetch(`${API_BASE_URL}/admin/backups/download?file=${filename}`, {
+    headers: authHeaders(token),
+  });
+  
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || "Failed to download backup file");
+  }
+
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.setAttribute("download", filename);
+  document.body.appendChild(link);
+  link.click();
+  link.parentNode.removeChild(link);
+}

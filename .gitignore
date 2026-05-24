@@ -1,0 +1,2 @@
+# Exclude backup archives and logs from Git
+backups/

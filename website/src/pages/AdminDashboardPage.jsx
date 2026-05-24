@@ -8,6 +8,10 @@ import {
   listAdminVisits,
   updateAdminResidentStatus,
   updateAdminVisitStatus,
+  downloadAdminExport,
+  listAdminBackups,
+  triggerAdminBackup,
+  downloadAdminBackup,
 } from "../services/api.js";
 
 const visitStatuses = ["new", "contacted", "scheduled", "completed", "cancelled"];
@@ -42,6 +46,7 @@ export default function AdminDashboardPage() {
   const [admin, setAdmin] = useState(null);
   const [visits, setVisits] = useState([]);
   const [residents, setResidents] = useState([]);
+  const [backups, setBackups] = useState([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [selectedRecord, setSelectedRecord] = useState(null);
@@ -85,9 +90,12 @@ export default function AdminDashboardPage() {
       if (activeTab === "visits") {
         const data = await listAdminVisits(token, { search, status: statusFilter });
         setVisits(data);
-      } else {
+      } else if (activeTab === "residents") {
         const data = await listAdminResidents(token, { search, status: statusFilter });
         setResidents(data);
+      } else if (activeTab === "exports") {
+        const data = await listAdminBackups(token);
+        setBackups(data);
       }
       setSelectedRecord(null);
       setSelectedType("");
@@ -204,7 +212,7 @@ export default function AdminDashboardPage() {
           </article>
           <article>
             <span>Current View</span>
-            <strong>{activeTab === "visits" ? "Visits" : "Residents"}</strong>
+            <strong>{activeTab === "visits" ? "Visits" : activeTab === "residents" ? "Residents" : "Exports"}</strong>
           </article>
         </div>
 
@@ -230,58 +238,81 @@ export default function AdminDashboardPage() {
             >
               Residents
             </button>
+            <button
+              className={activeTab === "exports" ? "active" : ""}
+              type="button"
+              onClick={() => {
+                setActiveTab("exports");
+                setStatusFilter("");
+              }}
+            >
+              Exports & Backups
+            </button>
           </div>
 
-          <form className="admin-filters" onSubmit={handleSearch}>
-            <input
-              aria-label="Search"
-              placeholder={activeTab === "visits" ? "Search name, email, phone" : "Search name, email, mobile"}
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
-            <select
-              aria-label="Status filter"
-              value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value)}
-            >
-              <option value="">All statuses</option>
-              {(activeTab === "visits" ? visitStatuses : residentStatuses).map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </select>
-            <button type="submit">Apply</button>
-          </form>
+          {activeTab !== "exports" && (
+            <form className="admin-filters" onSubmit={handleSearch}>
+              <input
+                aria-label="Search"
+                placeholder={activeTab === "visits" ? "Search name, email, phone" : "Search name, email, mobile"}
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+              <select
+                aria-label="Status filter"
+                value={statusFilter}
+                onChange={(event) => setStatusFilter(event.target.value)}
+              >
+                <option value="">All statuses</option>
+                {(activeTab === "visits" ? visitStatuses : residentStatuses).map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </select>
+              <button type="submit">Apply</button>
+            </form>
+          )}
         </div>
 
         {message ? <p className="admin-error">{message}</p> : null}
 
-        <div className="admin-content-grid">
-          <section className="admin-panel">
-            {isLoading ? (
-              <p className="admin-empty">Loading...</p>
-            ) : activeTab === "visits" ? (
-              <VisitTable visits={visits} onStatusChange={handleVisitStatusChange} onView={handleViewVisit} />
-            ) : (
-              <ResidentTable
-                residents={residents}
-                onStatusChange={handleResidentStatusChange}
-                onView={handleViewResident}
-              />
-            )}
-          </section>
+        {activeTab === "exports" ? (
+          <div className="admin-panel full-width">
+            <ExportsAndBackupsPanel
+              token={token}
+              backups={backups}
+              onRefreshBackups={loadData}
+              setMessage={setMessage}
+            />
+          </div>
+        ) : (
+          <div className="admin-content-grid">
+            <section className="admin-panel">
+              {isLoading ? (
+                <p className="admin-empty">Loading...</p>
+              ) : activeTab === "visits" ? (
+                <VisitTable visits={visits} onStatusChange={handleVisitStatusChange} onView={handleViewVisit} />
+              ) : (
+                <ResidentTable
+                  residents={residents}
+                  onStatusChange={handleResidentStatusChange}
+                  onView={handleViewResident}
+                />
+              )}
+            </section>
 
-          <AdminDetailPanel
-            record={selectedRecord}
-            type={selectedType}
-            isLoading={isDetailLoading}
-            onClose={() => {
-              setSelectedRecord(null);
-              setSelectedType("");
-            }}
-          />
-        </div>
+            <AdminDetailPanel
+              record={selectedRecord}
+              type={selectedType}
+              isLoading={isDetailLoading}
+              onClose={() => {
+                setSelectedRecord(null);
+                setSelectedType("");
+              }}
+            />
+          </div>
+        )}
       </section>
     </main>
   );
@@ -491,6 +522,224 @@ function ResidentDetail({ record }) {
       <DetailItem label="Status" value={record.status} />
       <DetailItem label="Created" value={formatDateTime(record.created_at)} />
       <DetailItem label="Updated" value={formatDateTime(record.updated_at)} />
+    </div>
+  );
+}
+
+function ExportsAndBackupsPanel({
+  token,
+  backups,
+  onRefreshBackups,
+  setMessage,
+}) {
+  const [target, setTarget] = useState("residents");
+  const [format, setFormat] = useState("csv");
+  const [filterType, setFilterType] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [exportLoading, setExportLoading] = useState(false);
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [success, setSuccess] = useState("");
+
+  const handleExport = async (e) => {
+    e.preventDefault();
+    setExportLoading(true);
+    setMessage("");
+    setSuccess("");
+    try {
+      await downloadAdminExport(token, target, {
+        format,
+        filterType: filterType || undefined,
+        startDate: filterType === "custom" ? startDate : undefined,
+        endDate: filterType === "custom" ? endDate : undefined,
+      });
+      setSuccess("Export downloaded successfully.");
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  const handleTriggerBackup = async () => {
+    setBackupLoading(true);
+    setMessage("");
+    setSuccess("");
+    try {
+      await triggerAdminBackup(token);
+      setSuccess("Backup executed successfully.");
+      onRefreshBackups();
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setBackupLoading(false);
+    }
+  };
+
+  const handleDownloadBackup = async (filename) => {
+    setMessage("");
+    setSuccess("");
+    try {
+      await downloadAdminBackup(token, filename);
+      setSuccess(`Backup ${filename} downloaded successfully.`);
+    } catch (error) {
+      setMessage(error.message);
+    }
+  };
+
+  function formatBytes(bytes) {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  }
+
+  return (
+    <div className="admin-exports-layout">
+      <div className="admin-exports-section">
+        <h3 className="admin-panel-title">Data Exports</h3>
+        <p className="admin-panel-copy">
+          Download collections, properties, enquiries, and resident datasets in filtered CSV/JSON reports.
+        </p>
+
+        {success ? <p className="admin-success">{success}</p> : null}
+
+        <form onSubmit={handleExport} className="admin-export-form">
+          <div className="admin-form-group">
+            <label>Data Target</label>
+            <select value={target} onChange={(e) => setTarget(e.target.value)}>
+              <option value="residents">Residents</option>
+              <option value="visit-requests">Visit Requests</option>
+              <option value="collections">Collections</option>
+              <option value="homes">Properties</option>
+              <option value="homepage">Homepage CMS Sections</option>
+              <option value="media">Media Metadata References</option>
+            </select>
+          </div>
+
+          <div className="admin-form-group">
+            <label>File Format</label>
+            <div className="admin-radio-group">
+              <label>
+                <input
+                  type="radio"
+                  name="format"
+                  value="csv"
+                  checked={format === "csv"}
+                  disabled={target === "homepage"}
+                  onChange={() => setFormat("csv")}
+                />
+                CSV (Spreadsheet)
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  name="format"
+                  value="json"
+                  checked={format === "json" || target === "homepage"}
+                  onChange={() => setFormat("json")}
+                />
+                JSON (Data Object)
+              </label>
+            </div>
+          </div>
+
+          <div className="admin-form-group">
+            <label>Reporting Filter</label>
+            <select value={filterType} onChange={(e) => setFilterType(e.target.value)}>
+              <option value="">All time records</option>
+              <option value="today">Today</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+              <option value="custom">Custom Date Range</option>
+            </select>
+          </div>
+
+          {filterType === "custom" ? (
+            <div className="admin-date-inputs">
+              <div className="admin-form-group">
+                <label>Start Date</label>
+                <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
+              </div>
+              <div className="admin-form-group">
+                <label>End Date</label>
+                <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} required />
+              </div>
+            </div>
+          ) : null}
+
+          <button type="submit" disabled={exportLoading} className="admin-btn-primary">
+            {exportLoading ? "Generating..." : "Download Export"}
+          </button>
+        </form>
+      </div>
+
+      <div className="admin-exports-section">
+        <div className="admin-panel-header">
+          <div>
+            <h3 className="admin-panel-title">System Backups</h3>
+            <p className="admin-panel-copy">
+              Trigger instant database schema dumps and compress uploaded media files into portable archives.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleTriggerBackup}
+            disabled={backupLoading}
+            className="admin-btn-secondary"
+          >
+            {backupLoading ? "Backing up..." : "Trigger Backup"}
+          </button>
+        </div>
+
+        <div className="admin-backup-table-wrap">
+          <table className="admin-backup-table">
+            <thead>
+              <tr>
+                <th>Backup File</th>
+                <th>Type</th>
+                <th>Size</th>
+                <th>Timestamp</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {backups.length > 0 ? (
+                backups.map((b) => (
+                  <tr key={b.filename}>
+                    <td>
+                      <span className="backup-filename">{b.filename}</span>
+                    </td>
+                    <td>
+                      <span className={`backup-type-badge ${b.type}`}>
+                        {b.type === "database" ? "PostgreSQL" : "Media"}
+                      </span>
+                    </td>
+                    <td>{formatBytes(b.size_bytes)}</td>
+                    <td>{new Date(b.created_at).toLocaleString("en-IN")}</td>
+                    <td>
+                      <button
+                        type="button"
+                        onClick={() => handleDownloadBackup(b.filename)}
+                        className="admin-backup-download-btn"
+                      >
+                        Download
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="5" className="admin-backup-empty">
+                    No timestamped backups found. Click Trigger Backup to create one.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }
