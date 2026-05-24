@@ -21,7 +21,7 @@ export default function PropertyCard({ property }) {
             </li>
           ))}
         </ul>
-        <Link to="/visit">
+        <Link to={property.visitHref || "/visit"}>
           Book a Visit <span>&rarr;</span>
         </Link>
       </div>

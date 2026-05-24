@@ -7,6 +7,7 @@ import Toast from "../components/Toast.jsx";
 import ZodiacSelector from "../components/ZodiacSelector.jsx";
 import { getCatalogCollections, getCatalogHomes, getHomepageContent } from "../services/api.js";
 import { properties, zodiacCollections } from "../data/zodiacCollections.js";
+import { buildVisitSearchParams } from "../utils/visitContext.js";
 
 export default function HomePage() {
   const [collections, setCollections] = useState(zodiacCollections);
@@ -174,7 +175,7 @@ export default function HomePage() {
 
   const selectedHomes = homes.filter((home) => {
     if (!home.collectionSlug) {
-      return selectedCollection.name === "Aries";
+      return true;
     }
 
     return home.collectionSlug === selectedCollection.slug;
@@ -185,6 +186,10 @@ export default function HomePage() {
     ? homes.filter((home) => featuredHomeIds.includes(String(home.id)))
     : [];
   const homesToRender = featuredHomes.length ? featuredHomes : visibleHomes;
+  const heroVisitHref = buildVisitSearchParams({ collection: selectedCollection, home: homesToRender[0] || visibleHomes[0] || null });
+  const heroSecondaryHref = homepage?.hero?.cta_secondary_href && homepage.hero.cta_secondary_href !== "/visit"
+    ? homepage.hero.cta_secondary_href
+    : heroVisitHref;
 
   return (
     <>
@@ -207,7 +212,7 @@ export default function HomePage() {
                 <a className="btn primary" href={homepage?.hero?.cta_primary_href || "#homes"}>
                   {homepage?.hero?.cta_primary_text || "Explore Homes"} <span>&rarr;</span>
                 </a>
-                <Link className="btn secondary" to={homepage?.hero?.cta_secondary_href || "/visit"}>
+                <Link className="btn secondary" to={heroSecondaryHref}>
                   {homepage?.hero?.cta_secondary_text || "Book a Visit"} <span>&rarr;</span>
                 </Link>
               </div>
@@ -325,7 +330,18 @@ export default function HomePage() {
             </div>
             <div className="explore-grid">
               {homesToRender.map((property) => (
-                <PropertyCard key={property.id} property={property} />
+                <PropertyCard
+                  key={property.id}
+                  property={{
+                    ...property,
+                    visitHref: buildVisitSearchParams({
+                      collection: property.collectionSlug
+                        ? collections.find((collection) => collection.slug === property.collectionSlug) || selectedCollection
+                        : selectedCollection,
+                      home: property,
+                    }),
+                  }}
+                />
               ))}
             </div>
           </section>

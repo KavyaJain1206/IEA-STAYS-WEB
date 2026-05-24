@@ -1,12 +1,44 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import FormField from "../components/FormField.jsx";
 import FormLayout from "../components/FormLayout.jsx";
-import { createVisitRequest } from "../services/api.js";
+import { createVisitRequest, getCatalogCollections, getCatalogHomes } from "../services/api.js";
+import { buildVisitCopy, resolveVisitContext } from "../utils/visitContext.js";
 
 export default function VisitPage() {
   const [statusMessage, setStatusMessage] = useState("");
   const [statusType, setStatusType] = useState("success");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [collections, setCollections] = useState([]);
+  const [homes, setHomes] = useState([]);
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const [collectionData, homeData] = await Promise.all([getCatalogCollections(), getCatalogHomes()]);
+        setCollections(collectionData || []);
+        setHomes((homeData || []).map((home) => ({
+          ...home,
+          collection_slug: home.collection?.slug,
+          collection_name: home.collection?.name,
+          collection_tone: home.collection?.tone,
+        })));
+      } catch {
+        setCollections([]);
+        setHomes([]);
+      }
+    };
+
+    load();
+  }, []);
+
+  const visitContext = useMemo(
+    () => resolveVisitContext({ collections, homes, searchParams }),
+    [collections, homes, searchParams]
+  );
+
+  const visitCopy = useMemo(() => buildVisitCopy(visitContext), [visitContext]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -28,7 +60,7 @@ export default function VisitPage() {
       await createVisitRequest(payload);
       event.currentTarget.reset();
       setStatusType("success");
-      setStatusMessage("Visit request submitted. The IEA Stays team will contact you soon.");
+      setStatusMessage(visitCopy.confirmation);
     } catch (error) {
       setStatusType("error");
       setStatusMessage(error.message);
@@ -39,8 +71,8 @@ export default function VisitPage() {
 
   return (
     <FormLayout
-      title="Book a visit to an Aries home."
-      description="Share your contact details and preferred visit window. The IEA Stays team can follow up with availability and next steps."
+      title={visitCopy.title}
+      description={visitCopy.description}
       kicker="Visit Request"
       heading="Tell us how to reach you"
       submitLabel="Submit request"
@@ -49,6 +81,9 @@ export default function VisitPage() {
       statusType={statusType}
       isSubmitting={isSubmitting}
     >
+      <div className="visit-context-banner">
+        <p>{visitCopy.intro}</p>
+      </div>
       <FormField required label="Full name" name="name" />
       <FormField required label="Phone number" name="phone" type="tel" />
       <FormField required label="Email" name="email" type="email" />
@@ -68,7 +103,7 @@ export default function VisitPage() {
         as="textarea"
         label="Message"
         name="message"
-        placeholder="Any questions or requirements?"
+        placeholder={visitCopy.placeholder}
       />
     </FormLayout>
   );
