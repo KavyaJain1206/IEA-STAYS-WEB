@@ -4,7 +4,9 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
 from app.core.config import get_settings
+from app.database.session import SessionLocal
 from app.routes import admin, catalog, residents, visits, homepage, media, homepage_sections
+from app.services.catalog_seed import ensure_zodiac_starter_collections
 
 settings = get_settings()
 
@@ -37,6 +39,17 @@ app.include_router(homepage.public_router, prefix=settings.api_v1_prefix)
 app.include_router(homepage.admin_router, prefix=settings.api_v1_prefix)
 app.include_router(media.router, prefix=settings.api_v1_prefix)
 app.include_router(homepage_sections.router, prefix=settings.api_v1_prefix)
+
+
+@app.on_event("startup")
+def seed_catalog_starters() -> None:
+    db = SessionLocal()
+    try:
+        ensure_zodiac_starter_collections(db)
+    except Exception:
+        db.rollback()
+    finally:
+        db.close()
 
 
 @app.get("/health", tags=["Health"])

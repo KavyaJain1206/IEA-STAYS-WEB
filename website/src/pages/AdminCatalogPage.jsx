@@ -14,6 +14,21 @@ import {
   updateAdminHome,
 } from "../services/api.js";
 
+const STARTER_ZODIAC_NAMES = new Set([
+  "Aries",
+  "Taurus",
+  "Gemini",
+  "Cancer",
+  "Leo",
+  "Virgo",
+  "Libra",
+  "Scorpio",
+  "Sagittarius",
+  "Capricorn",
+  "Aquarius",
+  "Pisces",
+]);
+
 const emptyCollectionForm = {
   name: "",
   symbol: "",
@@ -112,6 +127,24 @@ export default function AdminCatalogPage() {
     loadCatalog();
   }, [token]);
 
+  const orderedCollections = useMemo(() => {
+    return [...collections].sort(
+      (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.id - b.id
+    );
+  }, [collections]);
+
+  const starterCollections = useMemo(
+    () => orderedCollections.filter((collection) => STARTER_ZODIAC_NAMES.has(collection.name)),
+    [orderedCollections]
+  );
+
+  const customCollections = useMemo(
+    () => orderedCollections.filter((collection) => !STARTER_ZODIAC_NAMES.has(collection.name)),
+    [orderedCollections]
+  );
+
+  const starterCoverage = `${starterCollections.length}/12`;
+
   const resetCollectionForm = () => {
     setCollectionForm(emptyCollectionForm);
     setCollectionImageFile(null);
@@ -143,8 +176,10 @@ export default function AdminCatalogPage() {
 
       if (editingCollectionId) {
         await updateAdminCollection(token, editingCollectionId, payload);
+        setMessage("Collection updated.");
       } else {
         await createAdminCollection(token, payload);
+        setMessage("Custom collection created.");
       }
 
       resetCollectionForm();
@@ -174,8 +209,10 @@ export default function AdminCatalogPage() {
 
       if (editingHomeId) {
         await updateAdminHome(token, editingHomeId, payload);
+        setMessage("Home updated.");
       } else {
         await createAdminHome(token, payload);
+        setMessage("Home created.");
       }
 
       resetHomeForm();
@@ -216,16 +253,55 @@ export default function AdminCatalogPage() {
 
   const removeCollection = async (collection) => {
     if (!window.confirm(`Delete ${collection.name}? This will also delete its homes.`)) return;
-    await deleteAdminCollection(token, collection.id);
-    if (editingCollectionId === collection.id) resetCollectionForm();
-    await loadCatalog();
+    try {
+      await deleteAdminCollection(token, collection.id);
+      if (editingCollectionId === collection.id) resetCollectionForm();
+      setMessage("Collection deleted.");
+      await loadCatalog();
+    } catch (error) {
+      setMessage(error.message || "Unable to delete collection.");
+    }
   };
 
   const removeHome = async (home) => {
     if (!window.confirm(`Delete ${home.name}?`)) return;
-    await deleteAdminHome(token, home.id);
-    if (editingHomeId === home.id) resetHomeForm();
-    await loadCatalog();
+    try {
+      await deleteAdminHome(token, home.id);
+      if (editingHomeId === home.id) resetHomeForm();
+      setMessage("Home deleted.");
+      await loadCatalog();
+    } catch (error) {
+      setMessage(error.message || "Unable to delete home.");
+    }
+  };
+
+  const toggleCollection = async (collection) => {
+    try {
+      await updateAdminCollection(token, collection.id, { is_active: !collection.is_active });
+      setMessage(`${collection.name} is now ${collection.is_active ? "hidden" : "active"}.`);
+      await loadCatalog();
+    } catch (error) {
+      setMessage(error.message || "Unable to update collection status.");
+    }
+  };
+
+  const moveCollection = async (collection, direction) => {
+    const index = orderedCollections.findIndex((item) => item.id === collection.id);
+    if (index < 0) return;
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= orderedCollections.length) return;
+
+    const other = orderedCollections[targetIndex];
+    try {
+      await Promise.all([
+        updateAdminCollection(token, collection.id, { sort_order: other.sort_order }),
+        updateAdminCollection(token, other.id, { sort_order: collection.sort_order }),
+      ]);
+      setMessage(`Updated display order for ${collection.name}.`);
+      await loadCatalog();
+    } catch (error) {
+      setMessage(error.message || "Unable to reorder collections.");
+    }
   };
 
   return (
@@ -273,16 +349,16 @@ export default function AdminCatalogPage() {
 
         <div className="admin-summary">
           <article>
-            <span>Collections</span>
+            <span>Total collections</span>
             <strong>{summary.collections}</strong>
+          </article>
+          <article>
+            <span>Zodiac ready</span>
+            <strong>{starterCoverage}</strong>
           </article>
           <article>
             <span>Homes</span>
             <strong>{summary.homes}</strong>
-          </article>
-          <article>
-            <span>Status</span>
-            <strong>{isLoading ? "Loading" : "Ready"}</strong>
           </article>
         </div>
 
@@ -292,8 +368,11 @@ export default function AdminCatalogPage() {
           <section className="catalog-panel">
             <div className="catalog-panel-head">
               <div>
-                <p className="admin-kicker">Collection editor</p>
-                <h3>{editingCollectionId ? "Edit collection" : "Add collection"}</h3>
+                <p className="admin-kicker">Starter collections</p>
+                <h3>{editingCollectionId ? "Edit collection" : "Create custom collection"}</h3>
+                <p className="admin-sidebar-copy catalog-helper-copy">
+                  Zodiac collections are preloaded as starter content. Keep them curated, and add custom collections when needed.
+                </p>
               </div>
               {editingCollectionId ? (
                 <button className="catalog-clear" type="button" onClick={resetCollectionForm}>
@@ -302,7 +381,35 @@ export default function AdminCatalogPage() {
               ) : null}
             </div>
 
+            <div className="catalog-starter-grid">
+              {starterCollections.map((collection) => (
+                <article className="catalog-starter-card" key={collection.id}>
+                  <div className="catalog-starter-head">
+                    <div>
+                      <p className="catalog-starter-title">{collection.symbol} {collection.name}</p>
+                      <p className="catalog-starter-tone">{collection.tone}</p>
+                    </div>
+                    <span className={`catalog-status ${collection.is_active ? "active" : "hidden"}`}>
+                      {collection.is_active ? "Active" : "Hidden"}
+                    </span>
+                  </div>
+                  <p className="catalog-starter-description">{collection.description || "No description yet."}</p>
+                  <div className="catalog-row-actions">
+                    <button type="button" onClick={() => beginEditCollection(collection)}>Edit</button>
+                    <button type="button" onClick={() => toggleCollection(collection)}>
+                      {collection.is_active ? "Disable" : "Enable"}
+                    </button>
+                    <button type="button" onClick={() => moveCollection(collection, "up")}>Up</button>
+                    <button type="button" onClick={() => moveCollection(collection, "down")}>Down</button>
+                  </div>
+                </article>
+              ))}
+            </div>
+
             <form className="catalog-form" onSubmit={handleCollectionSubmit}>
+              <p className="catalog-form-title full-span">
+                {editingCollectionId ? "Update selected collection" : "Add a new custom collection"}
+              </p>
               <label>
                 Name
                 <input
@@ -388,6 +495,7 @@ export default function AdminCatalogPage() {
                 <thead>
                   <tr>
                     <th>Name</th>
+                    <th>Type</th>
                     <th>Tone</th>
                     <th>Status</th>
                     <th>Updated</th>
@@ -395,12 +503,13 @@ export default function AdminCatalogPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {collections.map((collection) => (
+                  {orderedCollections.map((collection) => (
                     <tr key={collection.id}>
                       <td>
                         <strong>{collection.name}</strong>
                         <span>{collection.slug}</span>
                       </td>
+                      <td>{STARTER_ZODIAC_NAMES.has(collection.name) ? "Starter" : "Custom"}</td>
                       <td>{collection.tone}</td>
                       <td>{collection.is_active ? "Active" : "Hidden"}</td>
                       <td>{formatDateTime(collection.updated_at)}</td>
@@ -409,6 +518,11 @@ export default function AdminCatalogPage() {
                           <button type="button" onClick={() => beginEditCollection(collection)}>
                             Edit
                           </button>
+                          <button type="button" onClick={() => toggleCollection(collection)}>
+                            {collection.is_active ? "Disable" : "Enable"}
+                          </button>
+                          <button type="button" onClick={() => moveCollection(collection, "up")}>Up</button>
+                          <button type="button" onClick={() => moveCollection(collection, "down")}>Down</button>
                           <button type="button" onClick={() => removeCollection(collection)}>
                             Delete
                           </button>
@@ -443,7 +557,7 @@ export default function AdminCatalogPage() {
                   onChange={(event) => setHomeForm({ ...homeForm, collection_id: event.target.value })}
                 >
                   <option value="">Select a collection</option>
-                  {collections.map((collection) => (
+                  {orderedCollections.map((collection) => (
                     <option key={collection.id} value={collection.id}>
                       {collection.name}
                     </option>

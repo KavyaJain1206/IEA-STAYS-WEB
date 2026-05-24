@@ -11,6 +11,7 @@ from app.schemas.catalog import (
     CatalogHomeCreate,
     CatalogHomeUpdate,
 )
+from app.services.catalog_seed import ensure_zodiac_starter_collections
 
 
 def slugify(value: str) -> str:
@@ -75,6 +76,7 @@ def delete_collection(db: Session, collection: HomeCollection) -> None:
 
 
 def list_collections(db: Session, include_inactive: bool = False) -> list[HomeCollection]:
+    ensure_zodiac_starter_collections(db)
     query = select(HomeCollection).order_by(HomeCollection.sort_order.asc(), HomeCollection.created_at.asc())
     if not include_inactive:
         query = query.where(HomeCollection.is_active.is_(True))
@@ -145,6 +147,7 @@ def get_home(db: Session, home_id: int) -> Home | None:
 
 
 def get_catalog_counts(db: Session) -> dict[str, int]:
+    ensure_zodiac_starter_collections(db)
     collection_count = db.scalar(select(func.count()).select_from(HomeCollection)) or 0
     home_count = db.scalar(select(func.count()).select_from(Home)) or 0
     return {"collections": int(collection_count), "homes": int(home_count)}
