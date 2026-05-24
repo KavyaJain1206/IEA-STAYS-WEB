@@ -96,9 +96,7 @@ export default function HomePage() {
             normalizedCollections[0]
           );
           setComingSoonCollection(
-            normalizedCollections.find((collection) => !collection.available) ||
-            normalizedCollections[1] ||
-            normalizedCollections[0]
+            normalizedCollections.find((collection) => !collection.available) || null
           );
         }
 
@@ -420,17 +418,19 @@ export default function HomePage() {
             <span className="spark-detail">&#10022;</span>
           </section>
 
-          <section className="coming-soon-section" id="coming-soon" aria-labelledby="coming-soon-title">
-            <div className="coming-symbol">{comingSoonCollection.symbol}</div>
-            <div>
-              <p className="kicker">&#10038; Coming Soon</p>
-              <h2 id="coming-soon-title">
-                <span>{comingSoonCollection.name}</span> Collection
-              </h2>
-              <p>{comingSoonCollection.tone}</p>
-              <p>{homepage?.coming?.description || "This zodiac-led PG collection is being curated. Soon, it will have its own homes, imagery, amenities, and story while keeping the same premium IEA Stays experience."}</p>
-            </div>
-          </section>
+          {comingSoonCollection && !comingSoonCollection.available ? (
+            <section className="coming-soon-section" id="coming-soon" aria-labelledby="coming-soon-title">
+              <div className="coming-symbol">{comingSoonCollection.symbol}</div>
+              <div>
+                <p className="kicker">&#10038; Coming Soon</p>
+                <h2 id="coming-soon-title">
+                  <span>{comingSoonCollection.name}</span> Collection
+                </h2>
+                <p>{comingSoonCollection.tone}</p>
+                <p>{homepage?.coming?.description || "This zodiac-led PG collection is being curated. Soon, it will have its own homes, imagery, amenities, and story while keeping the same premium IEA Stays experience."}</p>
+              </div>
+            </section>
+          ) : null}
         </main>
 
         <Footer />
