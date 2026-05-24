@@ -39,6 +39,7 @@ class CatalogCollectionRead(ORMModel):
     cover_image_src: str | None
     is_active: bool
     sort_order: int
+    is_starter: bool = False
     created_at: datetime
     updated_at: datetime
 

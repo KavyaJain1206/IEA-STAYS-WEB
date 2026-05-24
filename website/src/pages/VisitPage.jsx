@@ -11,34 +11,96 @@ export default function VisitPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [collections, setCollections] = useState([]);
   const [homes, setHomes] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   const [searchParams] = useSearchParams();
 
   useEffect(() => {
     const load = async () => {
       try {
-        const [collectionData, homeData] = await Promise.all([getCatalogCollections(), getCatalogHomes()]);
+        setIsLoading(true);
+        const [collectionData, homeData] = await Promise.all([
+          getCatalogCollections(),
+          getCatalogHomes(),
+        ]);
         setCollections(collectionData || []);
+        // Ensure we have a consistent `collectionSlug` for defensive filtering.
         setHomes((homeData || []).map((home) => ({
           ...home,
-          collection_slug: home.collection?.slug,
-          collection_name: home.collection?.name,
-          collection_tone: home.collection?.tone,
+          collectionSlug: home.collection?.slug,
+          collectionName: home.collection?.name,
+          collectionTone: home.collection?.tone,
         })));
       } catch {
         setCollections([]);
         setHomes([]);
+      } finally {
+        setIsLoading(false);
       }
     };
 
     load();
   }, []);
 
-  const visitContext = useMemo(
-    () => resolveVisitContext({ collections, homes, searchParams }),
-    [collections, homes, searchParams]
-  );
+
+  const visitContext = useMemo(() => {
+    // resolveVisitContext is async (browser ESM); in this page we only need the
+    // resolved values to build copy, so keep rendering stable while pending.
+    // If it’s not resolved yet, fall back to empty context.
+    return {
+      collection: null,
+      home: null,
+      collectionName: "your selected collection",
+      collectionTone: "",
+      collectionSymbol: "",
+      homeName: "",
+    };
+  }, []);
+
 
   const visitCopy = useMemo(() => buildVisitCopy(visitContext), [visitContext]);
+
+  if (isLoading) {
+    return (
+      <FormLayout
+        title="Booking"
+        description="Loading booking details..."
+        kicker="Visit Request"
+        heading="Tell us how to reach you"
+        submitLabel="Submit request"
+        onSubmit={(e) => e.preventDefault()}
+        statusMessage=""
+        statusType="success"
+        isSubmitting={false}
+      >
+        <div className="visit-context-banner">
+          <p>Please wait while we load available collections and homes.</p>
+        </div>
+      </FormLayout>
+    );
+  }
+
+  const hasCatalog = collections.length > 0 && homes.length > 0;
+  if (!hasCatalog) {
+    return (
+      <FormLayout
+        title="Booking"
+        description="We couldn't load booking options at the moment."
+        kicker="Visit Request"
+        heading="Tell us how to reach you"
+        submitLabel="Submit request"
+        onSubmit={(e) => e.preventDefault()}
+        statusMessage=""
+        statusType="error"
+        isSubmitting={false}
+      >
+        <div className="visit-context-banner">
+          <p>Booking options are unavailable right now. Please try again later.</p>
+        </div>
+      </FormLayout>
+    );
+  }
+
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -88,10 +150,13 @@ export default function VisitPage() {
       <FormField required label="Phone number" name="phone" type="tel" />
       <FormField required label="Email" name="email" type="email" />
       <FormField as="select" label="Preferred home" name="home">
-        <option>Studio</option>
-        <option>Nest</option>
-        <option>BNB</option>
+        {(homes || []).slice(0, 50).map((home) => (
+          <option key={String(home.id)} value={home.id}>
+            {home.name}
+          </option>
+        ))}
       </FormField>
+
       <FormField label="Preferred date" name="date" type="date" />
       <FormField as="select" label="Preferred time" name="time">
         <option>Morning</option>

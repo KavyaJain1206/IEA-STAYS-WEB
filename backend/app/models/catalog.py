@@ -3,6 +3,7 @@ from datetime import datetime
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.catalog_metadata import is_system_collection_name
 from app.database.session import Base
 
 
@@ -24,6 +25,10 @@ class HomeCollection(Base):
     )
 
     homes: Mapped[list["Home"]] = relationship(back_populates="collection", cascade="all, delete-orphan")
+
+    @property
+    def is_starter(self) -> bool:
+        return is_system_collection_name(self.name)
 
 
 class Home(Base):

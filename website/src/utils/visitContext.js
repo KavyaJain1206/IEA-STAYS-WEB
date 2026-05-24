@@ -1,4 +1,14 @@
+import {
+    resolveCollectionById,
+    resolveCollectionBySlug,
+    resolveHomeById,
+    resolveHomeBySlug,
+    ensureCollectionHomeLink,
+} from "./resolvers.js";
+
+// NOTE: legacy name-based matching removed. Identity must be resolved by ID/slug.
 const normalize = (value) => (value || "").trim().toLowerCase();
+
 
 function findMatch(items, value, keys = ["slug", "name", "id"]) {
     const target = normalize(value);
@@ -11,48 +21,71 @@ function findMatch(items, value, keys = ["slug", "name", "id"]) {
     );
 }
 
+
+// Build visit links using stable backend identity (IDs). Avoid name/tone/symbol inference.
 export function buildVisitSearchParams({ collection = null, home = null } = {}) {
     const params = new URLSearchParams();
 
-    if (collection?.slug) params.set("collection", collection.slug);
-    else if (collection?.name) params.set("collection", collection.name);
+    // Prefer IDs; fall back to slug only when IDs are missing.
+    if (collection?.id !== undefined && collection?.id !== null) params.set("collection_id", String(collection.id));
+    else if (collection?.slug) params.set("collection_slug", collection.slug);
 
-    if (collection?.name) params.set("collection_name", collection.name);
-    if (collection?.tone) params.set("collection_tone", collection.tone);
-    if (collection?.symbol) params.set("collection_symbol", collection.symbol);
-
-    if (home?.slug) params.set("home", home.slug);
-    else if (home?.id) params.set("home", String(home.id));
-    else if (home?.name) params.set("home", home.name);
-
-    if (home?.name) params.set("home_name", home.name);
+    if (home?.id !== undefined && home?.id !== null) params.set("home_id", String(home.id));
+    else if (home?.slug) params.set("home_slug", home.slug);
 
     const query = params.toString();
     return query ? `/visit?${query}` : "/visit";
 }
 
 export function resolveVisitContext({ collections = [], homes = [], searchParams }) {
-    const collectionValue = searchParams?.get("collection") || searchParams?.get("collection_name") || "";
-    const homeValue = searchParams?.get("home") || searchParams?.get("home_name") || "";
 
-    const collection = findMatch(collections, collectionValue);
-    const home = findMatch(homes, homeValue, ["slug", "name", "id"]);
 
-    const fallbackCollection = collection || collections[0] || null;
-    const fallbackHome = home || homes.find((entry) => entry.collection_slug === fallbackCollection?.slug) || homes[0] || null;
+    const sp = searchParams || { get: () => null };
 
-    const resolvedCollection = fallbackCollection || null;
-    const resolvedHome = fallbackHome || null;
+
+    const collectionId = sp.get("collection_id") || null;
+    const collectionSlug = sp.get("collection_slug") || null;
+    const homeId = sp.get("home_id") || null;
+    const homeSlug = sp.get("home_slug") || null;
+
+    // Resolve by ID/slug only. Do NOT use name/tone/symbol to infer identity.
+
+
+
+
+    let resolvedCollection = null;
+
+    if (collectionId !== null) resolvedCollection = resolveCollectionById(collections, collectionId);
+    if (!resolvedCollection && collectionSlug) resolvedCollection = resolveCollectionBySlug(collections, collectionSlug);
+    if (!resolvedCollection && Array.isArray(collections) && collections.length) resolvedCollection = collections[0];
+
+    let resolvedHome = null;
+    if (homeId !== null) resolvedHome = resolveHomeById(homes, homeId);
+    if (!resolvedHome && homeSlug) resolvedHome = resolveHomeBySlug(homes, homeSlug);
+
+    // If home is set but doesn't belong to the resolved collection, ignore it.
+    if (resolvedHome && resolvedCollection && !ensureCollectionHomeLink(resolvedCollection, resolvedHome)) {
+        resolvedHome = null;
+    }
+
+    // If no home, pick the first home under the resolved collection.
+    if (!resolvedHome && resolvedCollection) {
+        resolvedHome = (homes || []).find((h) => (h?.collectionSlug || h?.collection?.slug) === resolvedCollection?.slug) || null;
+    }
+
+    // Final fallback.
+    if (!resolvedHome && Array.isArray(homes) && homes.length) resolvedHome = homes[0];
 
     return {
-        collection: resolvedCollection,
-        home: resolvedHome,
-        collectionName: resolvedCollection?.name || searchParams?.get("collection_name") || "your selected collection",
-        collectionTone: resolvedCollection?.tone || searchParams?.get("collection_tone") || "",
-        collectionSymbol: resolvedCollection?.symbol || searchParams?.get("collection_symbol") || "",
-        homeName: resolvedHome?.name || searchParams?.get("home_name") || "",
+        collection: resolvedCollection || null,
+        home: resolvedHome || null,
+        collectionName: resolvedCollection?.name || "your selected collection",
+        collectionTone: resolvedCollection?.tone || "",
+        collectionSymbol: resolvedCollection?.symbol || "",
+        homeName: resolvedHome?.name || "",
     };
 }
+
 
 export function buildVisitCopy(context) {
     const collectionName = context.collectionName || "your selected collection";
