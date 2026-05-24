@@ -77,31 +77,15 @@ export default function Navbar() {
         <a href="/#services">Services</a>
       </nav>
 
-      {/* Desktop Auth and Admin options */}
+      {/* Desktop Auth and Admin options - Strictly inside the 3-dot options menu */}
       <div className="auth-nav">
-        {isResidentLoggedIn ? (
-          <>
-            <Link to="/visit">Book Visit</Link>
-            <button className="auth-link-button" type="button" onClick={handleLogout}>
-              Log out
-            </button>
-          </>
-        ) : (
-          <>
-            <Link to="/login">Login</Link>
-            <Link className="signup" to="/signup">
-              Sign up
-            </Link>
-          </>
-        )}
-
         {/* 3-dot Dropdown Menu */}
         <div className="admin-menu-container" ref={dropdownRef}>
           <button
             className={`three-dot-btn${isAdminDropdownOpen ? " active" : ""}`}
             type="button"
             onClick={() => setIsAdminDropdownOpen(!isAdminDropdownOpen)}
-            aria-label="Admin options menu"
+            aria-label="Options menu"
             aria-expanded={isAdminDropdownOpen}
           >
             &#8942;
@@ -121,9 +105,6 @@ export default function Navbar() {
                   <Link to="/admin/login" onClick={closeMenus}>
                     Admin Login
                   </Link>
-                  <Link to="/admin/signup" onClick={closeMenus}>
-                    Admin Signup
-                  </Link>
                 </>
               )}
               {isResidentLoggedIn && (
@@ -138,9 +119,6 @@ export default function Navbar() {
                   <div className="admin-dropdown-header">Admin Portal</div>
                   <Link to="/admin/login" onClick={closeMenus}>
                     Admin Login
-                  </Link>
-                  <Link to="/admin/signup" onClick={closeMenus}>
-                    Admin Signup
                   </Link>
                 </>
               )}
@@ -234,9 +212,6 @@ export default function Navbar() {
                 <>
                   <Link className="mobile-nav-link" to="/admin/login" onClick={closeMenus}>
                     Admin Login
-                  </Link>
-                  <Link className="mobile-nav-link" to="/admin/signup" onClick={closeMenus}>
-                    Admin Signup
                   </Link>
                 </>
               )}

@@ -7,7 +7,6 @@ import LoginPage from "./pages/LoginPage.jsx";
 import SignupPage from "./pages/SignupPage.jsx";
 import VisitPage from "./pages/VisitPage.jsx";
 import AdminLoginPage from "./pages/AdminLoginPage.jsx";
-import AdminSignupPage from "./pages/AdminSignupPage.jsx";
 import AdminDashboardPage from "./pages/AdminDashboardPage.jsx";
 import AdminCatalogPage from "./pages/AdminCatalogPage.jsx";
 import AdminHomepageSectionsPage from "./pages/AdminHomepageSectionsPage.jsx";
@@ -25,7 +24,6 @@ createRoot(document.getElementById("root")).render(
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/visit" element={<VisitPage />} />
           <Route path="/admin/login" element={<AdminLoginPage />} />
-          <Route path="/admin/signup" element={<AdminSignupPage />} />
           <Route path="/admin" element={<AdminDashboardPage />} />
           <Route path="/admin/catalog" element={<AdminCatalogPage />} />
           <Route path="/admin/homepage-sections" element={<AdminHomepageSectionsPage />} />
